@@ -1,0 +1,85 @@
+/* shop-overrides.css
+   Scoped to .page-main and with !important to ensure override.
+   Only load this on shop.php (don't include on index.php). */
+
+/* Buttons: filter, load more, view toggles */
+.page-main #priceFilterBtn,
+.page-main .btn-filter {
+  background: linear-gradient(90deg,var(--blue),var(--teal)) !important;
+  color: #fff !important;
+  border: 1px solid rgba(11,47,74,0.06) !important;
+  padding: 10px 14px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 30px rgba(9,30,45,0.12) !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+/* Load more: solid white card style */
+.page-main #loadMoreBtn,
+.page-main .btn-loadmore {
+  background: #fff !important;
+  color: var(--navy) !important;
+  border-radius: 10px !important;
+  padding: 10px 16px !important;
+  border: 1px solid rgba(11,47,74,0.06) !important;
+  box-shadow: 0 10px 26px rgba(9,30,45,0.06) !important;
+  font-weight: 700 !important;
+}
+
+/* View toggle (circle buttons) */
+.page-main .view-btn,
+.page-main #gridView, .page-main #listView {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(11,47,74,0.06) !important;
+  background: #fff !important;
+  box-shadow: 0 8px 18px rgba(9,30,45,0.04) !important;
+  color: var(--navy) !important;
+}
+
+/* Active state */
+.page-main .view-btn.active,
+.page-main #gridView.active,
+.page-main #listView.active {
+  background: linear-gradient(90deg,var(--blue),var(--teal)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 34px rgba(9,30,45,0.14) !important;
+}
+
+/* RESET small button */
+.page-main .btn-reset {
+  background:#fff !important;
+  color:var(--navy) !important;
+  border:1px solid rgba(11,47,74,0.06) !important;
+  padding:8px 12px !important;
+  border-radius:8px !important;
+  box-shadow: 0 6px 16px rgba(9,30,45,0.03) !important;
+}
+
+/* Ensure sidebar panels & inputs look right */
+.page-main .sidebar .filter-section {
+  background: #fff !important;
+  border-radius: 10px !important;
+  padding: 18px !important;
+  box-shadow: 0 8px 20px rgba(9,30,45,0.04) !important;
+}
+.page-main .sidebar input[type="number"],
+.page-main .sidebar input[type="text"] {
+  padding:10px 12px !important;
+  border-radius:8px !important;
+  border:1px solid rgba(11,47,74,0.08) !important;
+  background:#fafcff !important;
+}
+
+/* extra: increase specificity to beat other global rules */
+body .page-main #priceFilterBtn,
+html body .page-main #loadMoreBtn { /* specificity bump - no properties here, kept for specificity */ }
+
+/* small responsive tweaks */
+@media (max-width:900px){
+  .page-main #priceFilterBtn { height:36px !important; padding:8px 10px !important; }
+  .page-main .view-btn { width:36px !important; height:36px !important; }
+}

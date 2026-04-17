@@ -1,0 +1,43 @@
+/* shop-by-brands-fix.css
+   Small stylesheet to ensure brand tiles remain compact and do not show wishlist hearts.
+   Append this to styles.css (at EOF) OR save as this file and include it in header.
+*/
+
+/* Ensure heart buttons inside Shop By Brands are hidden (defensive) */
+.shop-by-brands .fav-btn,
+.shop-by-brands .wish-btn,
+.section-brands .fav-btn,
+.section-brands .wish-btn,
+.brands-carousel .fav-btn,
+.brands-carousel .wish-btn,
+.brand-section .fav-btn,
+.brand-section .wish-btn {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Make brand tiles compact (short rounded thumbnail) */
+.shop-by-brands .brand-card .product-thumb,
+.section-brands .brand-card .product-thumb {
+  height: 72px !important;
+  min-height: 72px !important;
+  max-width: 240px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(11,47,74,0.06) !important;
+  background: #fff !important;
+  box-shadow: 0 2px 6px rgba(9,30,45,0.03) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden !important;
+  margin: 0 auto 8px auto !important;
+}
+
+/* Hide brand title/count under thumbnails (match minimal look). Remove these rules if you want titles visible. */
+.shop-by-brands .brand-card .prod-title,
+.shop-by-brands .brand-card .product-price,
+.section-brands .brand-card .prod-title,
+.section-brands .brand-card .product-price {
+  display: none !important;
+}
