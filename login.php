@@ -1,23 +1,14 @@
 <?php
-// login.php - simple login page storing users in users.json (demo use only)
+// login.php - รองรับทั้ง Username และ Email พร้อมปุ่มดูรหัสผ่าน
 session_start();
+require_once __DIR__ . '/config.php';
 
-$USERS_FILE = __DIR__ . '/users.json';
-
-// helper: read users (assoc array username -> ['id'=>..., 'username'=>..., 'password'=>hash])
-function read_users($file) {
-    if (!file_exists($file)) return [];
-    $json = @file_get_contents($file);
-    if (!$json) return [];
-    $arr = json_decode($json, true);
-    if (!is_array($arr)) return [];
-    return $arr;
-}
-function write_users($file, $users) {
-    @file_put_contents($file, json_encode($users, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+// เชื่อมต่อ Database
+$pdo = null;
+if (function_exists('getPDO')) {
+    try { $pdo = getPDO(); } catch (Throwable $e) { }
 }
 
-// CSRF token helpers
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
 }
@@ -26,39 +17,42 @@ $csrf_token = $_SESSION['csrf_token'];
 $errors = [];
 $success = null;
 
-// If already logged in, redirect to index
-if (isset($_SESSION['user_name']) && !empty($_SESSION['user_name'])) {
+if (isset($_SESSION['user_name'])) {
     header('Location: index.php');
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $post_token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($csrf_token, $post_token)) {
-        $errors[] = 'Invalid request (CSRF).';
+    if (!$pdo) {
+        $errors[] = 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้';
     } else {
-        $username = trim((string)($_POST['username'] ?? ''));
-        $password = (string)($_POST['password'] ?? '');
-
-        if ($username === '' || $password === '') {
-            $errors[] = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+        $post_token = $_POST['csrf_token'] ?? '';
+        if (!hash_equals($csrf_token, $post_token)) {
+            $errors[] = 'Invalid request (CSRF).';
         } else {
-            $users = read_users($USERS_FILE);
-            if (!isset($users[$username])) {
-                $errors[] = 'ไม่พบชื่อผู้ใช้นี้';
+            // รับค่าจากช่องเดียว (เป็นได้ทั้ง email หรือ username)
+            $login_identity = trim((string)($_POST['login_identity'] ?? ''));
+            $password = (string)($_POST['password'] ?? '');
+
+            if ($login_identity === '' || $password === '') {
+                $errors[] = 'กรุณากรอกข้อมูลให้ครบถ้วน';
             } else {
-                $user = $users[$username];
-                if (password_verify($password, $user['password'])) {
-                    // login success
+                // ค้นหาจากทั้งช่อง username หรือ email
+                $stmt = $pdo->prepare("SELECT id, username, email, password_hash FROM users WHERE username = ? OR email = ? LIMIT 1");
+                $stmt->execute([$login_identity, $login_identity]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($user && password_verify($password, $user['password_hash'])) {
+                    // ล็อกอินสำเร็จ
                     session_regenerate_id(true);
                     $_SESSION['user_name'] = $user['username'];
                     $_SESSION['user_id'] = $user['id'];
-                    $success = 'เข้าสู่ระบบสำเร็จ กำลังเปลี่ยนหน้า...';
-                    // redirect to index or intended page
-                    header('Location: index.php');
+                    
+                    $success = 'เข้าสู่ระบบสำเร็จ! กำลังพาท่านไปยังหน้าหลัก...';
+                    echo "<script>window.location.replace('index.php');</script>";
                     exit;
                 } else {
-                    $errors[] = 'รหัสผ่านไม่ถูกต้อง';
+                    $errors[] = 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง';
                 }
             }
         }
@@ -73,56 +67,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>เข้าสู่ระบบ</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .auth-page { padding:48px 0; min-height:70vh; }
-    .auth-card { max-width:420px; margin:28px auto; background:#fff; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(9,30,45,0.06); border:1px solid rgba(11,47,74,0.04); }
-    .auth-card h1{ margin:0 0 12px; font-size:1.25rem; color:var(--navy); }
-    .auth-card label{ display:block; margin-top:12px; font-weight:700; color:var(--navy); }
-    .auth-card input[type="text"], .auth-card input[type="password"]{ width:100%; padding:10px 12px; margin-top:6px; border-radius:8px; border:1px solid rgba(11,47,74,0.08); box-sizing:border-box; }
+    body { background-color: #f9fbff; }
+    .auth-page { padding: 60px 20px; min-height: 80vh; display: flex; align-items: center; justify-content: center; }
+    .auth-card { width: 100%; max-width: 400px; background: #fff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 12px 40px rgba(9,30,45,0.08); border: 1px solid rgba(11,47,74,0.05); }
+    .auth-card h1 { margin: 0 0 8px; font-size: 1.6rem; font-weight: 800; color: var(--navy); text-align: center; }
+    .subtitle { text-align: center; color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
+    label { display: block; margin-top: 16px; margin-bottom: 8px; font-weight: 700; color: var(--navy); }
     
-    /* แก้ไขให้ปุ่มชิดขวา */
-    .btn-primary { display:block; margin-left:auto; margin-right:0; background:linear-gradient(90deg,var(--blue),var(--teal)); color:#fff; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:800; margin-top:14px; }
+    /* กล่องสำหรับใส่ไอคอนรูปรหัสผ่าน */
+    .input-wrapper { position: relative; display: block; }
+    .input-wrapper input { width: 100%; padding: 14px; padding-right: 48px; border-radius: 10px; border: 1px solid rgba(11,47,74,0.15); box-sizing: border-box; background: #fcfcfd; font-family: inherit; font-size: 1rem; transition: all 0.3s ease; }
+    .input-wrapper input:focus { outline: none; border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(30,144,255,0.1); }
     
-    .muted { color: rgba(11,47,74,0.6); font-size:0.95rem; }
-    .error { background:#fff7f7; border:1px solid rgba(176,0,32,0.08); color:#a20000; padding:10px; border-radius:8px; margin-bottom:10px; }
-    .success { background:#f6fff6; border:1px solid rgba(43,182,115,0.12); color:#127a3b; padding:10px; border-radius:8px; margin-bottom:10px; }
-    
-    /* แก้ไขให้ลิงก์อยู่ตรงกลาง */
-    .links { margin-top:24px; font-size:0.95rem; text-align:center; }
-    
-    .links a { color:var(--blue); text-decoration:underline; }
+    /* สไตล์ไอคอนรูปตา */
+    .toggle-password { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
+    .toggle-password:hover { color: var(--navy); }
+    .toggle-password svg { width: 20px; height: 20px; }
+
+    .btn-login { width: 100%; background: linear-gradient(135deg, var(--blue), var(--teal)); color: #fff; border: 0; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: 800; margin-top: 28px; box-shadow: 0 8px 24px rgba(30,144,255,0.25); font-size: 1.05rem; transition: transform 0.2s, box-shadow 0.2s; }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(30,144,255,0.35); }
+    .error { background: #fff7f7; color: #ff4d4f; padding: 12px; border-radius: 10px; margin-bottom: 20px; text-align: center; font-weight: 600; border: 1px solid rgba(255,77,79,0.2); font-size: 0.95rem; }
+    .success { background: #f6fff6; border: 1px solid rgba(43,182,115,0.2); color: #127a3b; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 0.95rem; font-weight: 700; text-align: center; }
+    .links { margin-top: 32px; text-align: center; color: var(--muted); font-size: 0.95rem; }
+    .links a { color: var(--blue); text-decoration: none; font-weight: 700; transition: color 0.2s; }
+    .links a:hover { color: var(--navy); text-decoration: underline; }
   </style>
+
+  <script>
+    // สคริปต์สลับซ่อน/แสดงรหัสผ่าน
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>'; // ไอคอนตาขีดฆ่า
+        } else {
+            input.type = 'password';
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'; // ไอคอนตาปกติ
+        }
+    }
+  </script>
 </head>
 <body>
   <?php if (file_exists(__DIR__ . '/navbar.php')) include __DIR__ . '/navbar.php'; ?>
-
-  <main class="container auth-page">
+  <main class="auth-page">
     <div class="auth-card">
       <h1>เข้าสู่ระบบ</h1>
 
-      <?php if (!empty($errors)): ?>
-        <div class="error"><?php echo htmlspecialchars(implode('<br>', $errors)); ?></div>
-      <?php endif; ?>
+      <?php if (!empty($errors)) echo '<div class="error">'.implode('<br>', $errors).'</div>'; ?>
       <?php if ($success): ?>
         <div class="success"><?php echo htmlspecialchars($success); ?></div>
       <?php endif; ?>
 
-      <form method="post" action="login.php" autocomplete="off" novalidate>
+      <form method="post" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-        <label for="username">ชื่อผู้ใช้</label>
-        <input id="username" name="username" type="text" required autofocus>
+        
+        <label for="login_identity">ชื่อผู้ใช้ หรือ อีเมล</label>
+        <div class="input-wrapper">
+          <input id="login_identity" name="login_identity" type="text" placeholder="Username หรือ Email" required autofocus>
+        </div>
 
         <label for="password">รหัสผ่าน</label>
-        <input id="password" name="password" type="password" required>
+        <div class="input-wrapper">
+          <input id="password" name="password" type="password" placeholder="กรอกรหัสผ่าน" required>
+          <button type="button" class="toggle-password" onclick="togglePassword('password', this)" aria-label="แสดงรหัสผ่าน">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
 
-        <button class="btn-primary" type="submit">เข้าสู่ระบบ</button>
+        <button class="btn-login" type="submit">เข้าสู่ระบบ</button>
       </form>
 
       <div class="links">
-        ยังไม่มีบัญชี? <a href="register.php">ลงทะเบียน</a>
+        ยังไม่มีบัญชีใช่หรือไม่? <a href="register.php">ลงทะเบียนที่นี่</a>
       </div>
     </div>
   </main>
-
   <?php if (file_exists(__DIR__ . '/footer.php')) include __DIR__ . '/footer.php'; ?>
 </body>
 </html>

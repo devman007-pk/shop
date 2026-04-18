@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $cartCount = isset($_SESSION['cart_count']) ? (int)$_SESSION['cart_count'] : 0;
 $wishCount = isset($_SESSION['wish_count']) ? (int)$_SESSION['wish_count'] : 0;
 $username = isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name'], ENT_QUOTES, 'UTF-8') : 'Guest';
+$accountLink = isset($_SESSION['user_name']) ? 'dashboard.php' : 'login.php';
 
 function nav_active(string $file): bool {
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -317,7 +318,7 @@ html, body {
         </button>
 
         <!-- Account -->
-        <button class="action-item account-btn" aria-label="บัญชีผู้ใช้" type="button" onclick="location.href='login.php'">
+        <button class="action-item account-btn" aria-label="บัญชีผู้ใช้" type="button" onclick="location.href='<?php echo $accountLink; ?>'">
           <span class="icon" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>

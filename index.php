@@ -17,7 +17,13 @@ if (file_exists(__DIR__ . '/config.php')) {
             $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // products
-            $stmt = $pdo->query("SELECT id, name, COALESCE(image_url, NULL) AS image_url, COALESCE(price, NULL) AS price FROM products LIMIT 12");
+            $stmt = $pdo->query("
+                SELECT p.id, p.name, p.price,
+                (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.position ASC LIMIT 1) AS image_url
+                FROM products p 
+                WHERE p.is_active = 1 
+                LIMIT 12
+            ");
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $configLoaded = true;
@@ -81,9 +87,129 @@ function formatPrice($p) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ร้านตัวอย่าง - ธีม ฟ้า น้ำเงิน เขียว</title>
-
   <link rel="stylesheet" href="styles.css">
+  
+  <style>
+    /* =========================================
+       CSS สำหรับ Hero Banner Slider
+       ========================================= */
+    .hero-banner-wrapper { 
+        position: relative; 
+        width: 100%; 
+        max-width: 1920px; 
+        margin: 0 auto; 
+        overflow: hidden; 
+        background: #0b2f4a; 
+    }
+    
+    .hero-slider-track { 
+        display: flex; 
+        transition: transform 0.5s ease-in-out; 
+        height: 450px; 
+    }
+    
+    @media (min-width: 1440px) {
+        .hero-slider-track { height: 550px; }
+    }
+    
+    .hero-slide { 
+        min-width: 100%; 
+        height: 100%; 
+        background-size: cover; 
+        background-position: center; 
+        position: relative; 
+        display: flex; 
+        align-items: center; 
+        justify-content: flex-start;
+        padding: 0 10%; 
+        box-sizing: border-box; 
+    }
+    
+    /* กล่องข้อความและปุ่มบนแบนเนอร์ */
+    .hero-slide-content { 
+        position: relative; 
+        z-index: 2; 
+        max-width: 600px; 
+        width: 100%; 
+        text-align: left;
+        /* === ดันปุ่มลงมาให้ต่ำกว่าเดิม === */
+        margin-top: 200px; 
+    }
+    
+    .btn-hero {
+        display: inline-block;
+        background: linear-gradient(90deg, #1e90ff, #0056b3);
+        color: white;
+        padding: 12px 32px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 1.1rem;
+        box-shadow: 0 8px 20px rgba(30, 144, 255, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-hero:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(30, 144, 255, 0.6);
+        color: white;
+    }
 
+    /* ปุ่มลูกศร ซ้าย-ขวา */
+    .hero-arrow { 
+        position: absolute; 
+        top: 50%; 
+        transform: translateY(-50%); 
+        background: rgba(255,255,255,0.8); 
+        color: var(--navy); 
+        border: none; 
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer; 
+        border-radius: 50%; 
+        transition: 0.3s; 
+        z-index: 10; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .hero-arrow:hover { background: #ffffff; color: var(--blue); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+    .hero-arrow.prev { left: 20px; }
+    .hero-arrow.next { right: 20px; }
+    .hero-arrow svg { width: 22px; height: 22px; }
+
+    /* จุดไข่ปลา (Dots) */
+    .hero-dots { 
+        position: absolute; 
+        bottom: 20px; 
+        width: 100%; 
+        text-align: center; 
+        z-index: 10; 
+    }
+    .hero-dot { 
+        display: inline-block; 
+        width: 10px; 
+        height: 10px; 
+        margin: 0 5px; 
+        background: rgba(255,255,255,0.4); 
+        border-radius: 50%; 
+        cursor: pointer; 
+        transition: 0.3s; 
+    }
+    .hero-dot.active { background: white; width: 28px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+    /* Responsive มือถือ */
+    @media (max-width: 768px) { 
+        .hero-slider-track { height: 220px; } 
+        .hero-arrow { width: 32px; height: 32px; }
+        .hero-arrow.prev { left: 10px; }
+        .hero-arrow.next { right: 10px; }
+        .btn-hero { padding: 8px 20px; font-size: 0.95rem; }
+        .hero-slide { padding: 0 5%; justify-content: center; }
+        /* === ดันปุ่มลงมาสำหรับหน้าจอมือถือ === */
+        .hero-slide-content { text-align: center; margin-top: 80px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -96,14 +222,40 @@ function formatPrice($p) {
   ?>
 
   <main>
-    <section id="home" class="hero">
-      <div class="container hero-content">
-        <h1>ยินดีต้อนรับสู่ร้านตัวอย่าง</h1>
-        <p>สินค้าเกรดคุณภาพ พร้อมแบรนด์ชั้นนำ เลือกซื้อได้ง่าย ๆ</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="shop.php">ไปที่ร้านค้า</a>
-          <a class="btn btn-outline" href="brand.php">ดูแบรนด์</a>
+    <section class="hero-banner-wrapper">
+      <div class="hero-slider-track" id="heroSliderTrack">
+        
+        <div class="hero-slide" style="background-image: url('banner/1.png');">
+          <div class="hero-slide-content">
+            <a href="shop.php" class="btn-hero">Shop Now</a>
+          </div>
         </div>
+
+        <div class="hero-slide" style="background-image: url('banner/2.png');">
+          <div class="hero-slide-content">
+            <a href="shop.php" class="btn-hero" style="background: linear-gradient(90deg, #ff4d4f, #d9363e);">Shop Now</a>
+          </div>
+        </div>
+
+        <div class="hero-slide" style="background-image: url('banner/3.png');">
+          <div class="hero-slide-content">
+            <a href="shop.php" class="btn-hero">Shop Now</a>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="hero-arrow prev" onclick="moveHeroSlide(-1)" aria-label="ย้อนกลับ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <button class="hero-arrow next" onclick="moveHeroSlide(1)" aria-label="ถัดไป">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+
+      <div class="hero-dots">
+        <span class="hero-dot active" onclick="setHeroSlide(0)"></span>
+        <span class="hero-dot" onclick="setHeroSlide(1)"></span>
+        <span class="hero-dot" onclick="setHeroSlide(2)"></span>
       </div>
     </section>
 
@@ -234,6 +386,44 @@ function formatPrice($p) {
       include_once $footerPath;
   }
   ?>
+
+  <script>
+    let currentHeroSlide = 0;
+    const totalHeroSlides = 3; 
+    const heroSliderTrack = document.getElementById('heroSliderTrack');
+    const heroDots = document.querySelectorAll('.hero-dot');
+    let heroInterval;
+
+    function updateHeroSlider() {
+        heroSliderTrack.style.transform = `translateX(-${currentHeroSlide * 100}%)`;
+        heroDots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentHeroSlide);
+        });
+    }
+
+    function moveHeroSlide(step) {
+        currentHeroSlide = (currentHeroSlide + step + totalHeroSlides) % totalHeroSlides;
+        updateHeroSlider();
+        resetHeroInterval();
+    }
+
+    function setHeroSlide(index) {
+        currentHeroSlide = index;
+        updateHeroSlider();
+        resetHeroInterval();
+    }
+
+    function startHeroInterval() {
+        heroInterval = setInterval(() => { moveHeroSlide(1); }, 4000); 
+    }
+
+    function resetHeroInterval() {
+        clearInterval(heroInterval);
+        startHeroInterval();
+    }
+
+    startHeroInterval();
+  </script>
 
   <script src="script.js"></script>
 

@@ -34,7 +34,7 @@ if (isset($_GET['meta'])) {
         $sql = "
           SELECT pt.tag_value AS value, COUNT(DISTINCT pt.product_id) AS cnt
           FROM product_tags pt
-          JOIN products p ON p.id = pt.product_id AND p.active = 1
+          JOIN products p ON p.id = pt.product_id AND p.is_active = 1
           WHERE pt.tag_group = :group
           GROUP BY pt.tag_value
           ORDER BY cnt DESC, pt.tag_value ASC
@@ -51,7 +51,7 @@ if (isset($_GET['meta'])) {
     if ($meta === 'brands') {
         $sql = "
           SELECT b.id, b.name, COALESCE(b.logo_url, '') AS logo_url,
-                 (SELECT COUNT(*) FROM products p WHERE p.brand_id = b.id AND p.active = 1) AS cnt
+                 (SELECT COUNT(*) FROM products p WHERE p.brand_id = b.id AND p.is_active = 1) AS cnt
           FROM brands b
           WHERE COALESCE(b.active, 1) = 1
           ORDER BY b.name ASC
@@ -80,7 +80,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     $offset = ($page - 1) * $per_page;
 
     $params = [];
-    $where = ["p.active = 1"];
+    $where = ["p.is_active = 1"];
 
     if ($q !== '') {
         $where[] = "(p.name LIKE :q OR p.description LIKE :q OR p.sku LIKE :q)";
@@ -93,11 +93,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     }
 
     if ($min_price !== null) {
-        $where[] = "p.price_base >= :min_price";
+        $where[] = "p.price >= :min_price";
         $params[':min_price'] = $min_price;
     }
     if ($max_price !== null) {
-        $where[] = "p.price_base <= :max_price";
+        $where[] = "p.price <= :max_price";
         $params[':max_price'] = $max_price;
     }
 
@@ -109,8 +109,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     if (count($where) > 0) $where_sql = 'WHERE ' . implode(' AND ', $where);
 
     $order_sql = 'ORDER BY p.id DESC';
-    if ($sort === 'price-asc') $order_sql = 'ORDER BY p.price_base ASC';
-    elseif ($sort === 'price-desc') $order_sql = 'ORDER BY p.price_base DESC';
+    if ($sort === 'price-asc') $order_sql = 'ORDER BY p.price ASC';
+    elseif ($sort === 'price-desc') $order_sql = 'ORDER BY p.price DESC';
     elseif ($sort === 'name') $order_sql = 'ORDER BY p.name ASC';
 
     // Count total
@@ -127,10 +127,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           p.name AS title,
           p.slug,
           p.sku,
-          p.price_base AS price,
+          p.price,
           p.description,
-          p.active,
-          p.featured,
+          p.is_active,
+          p.is_featured,
           b.name AS brand,
           (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.position ASC LIMIT 1) AS image_url,
           (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM product_categories pc JOIN categories c ON c.id = pc.category_id WHERE pc.product_id = p.id) AS categories
