@@ -1,5 +1,5 @@
 <?php
-// cart.php - "ตะกร้าของฉัน" (My Cart) page
+// cart.php - "ตะกร้าของฉัน" (My Cart) page พร้อมเลย์เอาต์สรุปยอดแบบใหม่ (แก้ไขปุ่มใช้โค้ดไม่ให้ขยับ)
 declare(strict_types=1);
 
 ob_start();
@@ -49,11 +49,11 @@ if (isset($_GET['add'])) {
 }
 
 // ---------------------------------------------------------
-// 2. จัดการคำสั่งจาก Form (อัปเดตจำนวน / ลบสินค้า)
+// 2. จัดการคำสั่งจาก Form (อัปเดตจำนวน / ลบสินค้า / ส่วนลด)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_GET['action'])) {
     
-    // ระบบอัปเดตจำนวนสินค้าแบบใหม่
+    // ระบบอัปเดตจำนวนสินค้า
     if (isset($_POST['update_qty']) && isset($_POST['pid']) && isset($_POST['qty'])) {
         $pid = (string)$_POST['pid'];
         $q = (int)$_POST['qty'];
@@ -73,6 +73,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_GET['action'])) {
     // ล้างตะกร้าทั้งหมด
     if (isset($_POST['clear_cart'])) {
         $_SESSION['cart'] = [];
+        unset($_SESSION['discount_code']);
+    }
+
+    // === ระบบจัดการโค้ดส่วนลด ===
+    if (isset($_POST['apply_discount'])) {
+        $code = trim($_POST['discount_code'] ?? '');
+        if ($code !== '') {
+            $_SESSION['discount_code'] = strtoupper($code);
+        }
+    }
+    if (isset($_POST['remove_discount'])) {
+        unset($_SESSION['discount_code']);
     }
 
     $_SESSION['cart_mutated_by_php'] = true;
@@ -176,20 +188,37 @@ if (!empty($_SESSION['cart'])) {
     }
 }
 
+// ---------------------------------------------------------
+// 4. คำนวณส่วนลด และยอดสรุป
+// ---------------------------------------------------------
+$discountCode = $_SESSION['discount_code'] ?? null;
+$discountAmount = 0.00;
+$discountError = false;
+
+if ($discountCode && $subtotal > 0) {
+    if ($discountCode === 'SAVE10') {
+        $discountAmount = $subtotal * 0.10;
+    } elseif ($discountCode === 'MINUS50') {
+        $discountAmount = 50.00;
+    } else {
+        $discountError = true;
+        unset($_SESSION['discount_code']);
+        $discountCode = null;
+    }
+    if ($discountAmount > $subtotal) $discountAmount = $subtotal;
+}
+
+$shipping = 0.00;
+$tax = 0.00;
+$grandTotal = $subtotal - $discountAmount + $shipping + $tax;
+
 function fmtPrice($p) {
     if ($p === null || $p === '') return null;
     return number_format((float)$p, 2);
 }
 
-// ==========================================
-// ฟังก์ชันแปลงตัวเลข ID เป็นรหัส SKU สวยๆ (วิธีที่ 2)
-// ==========================================
 function formatSKU($id) {
-    // ถ้า ID เป็นตัวเลข (มาจาก Database) ให้แปลงเป็นรูปแบบ PROD-0001
-    if (is_numeric($id)) {
-        return sprintf("PROD-%04d", (int)$id);
-    }
-    // ถ้าไม่ใช่ (เช่น p2-c5 ที่เป็นตัวอย่าง) ให้แสดงแบบเดิมไปก่อน
+    if (is_numeric($id)) return sprintf("PROD-%04d", (int)$id);
     return $id;
 }
 ?>
@@ -222,97 +251,97 @@ function formatSKU($id) {
     .cart-item .meta .price { font-weight:900; font-size:1.15rem; color:#9B0F06; }
     .cart-item .actions { display:flex; flex-direction:column; gap:12px; align-items:flex-end; }
     
-    .cart-summary { background:#fff; border-radius:12px; padding:20px; border:1px solid rgba(11,47,74,0.04); box-shadow:0 12px 32px rgba(9,30,45,0.05); }
+    .cart-summary { background:#fff; border-radius:12px; padding:24px; border:1px solid rgba(11,47,74,0.04); box-shadow:0 12px 32px rgba(9,30,45,0.05); }
     
-    .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:8px; border:0; cursor:pointer; font-weight:800; text-decoration:none !important; text-align:center; }
-    .btn-primary { background: linear-gradient(90deg,var(--blue),var(--teal)); color:#fff; box-shadow:0 10px 28px rgba(9,30,45,0.06); }
-    .btn-outline { border:1px solid rgba(11,47,74,0.06); background:#fff; color:var(--navy); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:8px; border:0; cursor:pointer; font-weight:800; text-decoration:none !important; text-align:center; transition: all 0.2s; }
     
-    .btn-danger { background: #fff; border: 1px solid rgba(255,77,79,0.3); color: #ff4d4f; transition: all 0.2s ease; }
-    .btn-danger:hover { background: #ff4d4f; color: #fff; box-shadow: 0 6px 16px rgba(255,77,79,0.2); border-color: #ff4d4f; }
+    .btn-primary { background: #1677ff; color: #fff; box-shadow: 0 4px 12px rgba(22, 119, 255, 0.2); }
+    .btn-primary:hover { background: #0958d9; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(22, 119, 255, 0.3); }
+    
+    .btn-outline { border:1px solid rgba(11,47,74,0.15); background:#fff; color:var(--navy); }
+    .btn-outline:hover { background:#f0f7ff; border-color:var(--blue); color:var(--blue); }
+    
+    .btn-danger { background: #fff; border: 1px solid rgba(255,77,79,0.3); color: #ff4d4f; }
+    .btn-danger:hover { background: #ff4d4f; color: #fff; border-color: #ff4d4f; }
 
-    .btn-clear { background: #4a5568; color: #fff; width: auto; padding: 10px 20px; border-radius: 8px; box-shadow: 0 8px 20px rgba(74,85,104,0.15); transition: background 0.2s ease; font-size:0.95rem; }
-    .btn-clear:hover { background: #2d3748; }
+    .btn-clear { background: #4a5568; color: #fff; width: auto; padding: 10px 20px; border-radius: 8px; font-size:0.95rem; }
 
     .qty-control { display:flex; align-items:center; background:#fff; border:1px solid rgba(11,47,74,0.1); border-radius:8px; overflow:hidden; }
-    .qty-btn { width:32px; height:32px; background:#f7f9fb; border:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; color:var(--navy); cursor:pointer; transition:background 0.2s; }
-    .qty-btn:hover { background:#e2e8f0; }
-    .qty-input-box { width:44px; height:32px; border:none; border-left:1px solid rgba(11,47,74,0.1); border-right:1px solid rgba(11,47,74,0.1); text-align:center; font-weight:700; color:var(--navy); font-size:1rem; outline:none; -moz-appearance: textfield; }
-    .qty-input-box::-webkit-outer-spin-button, .qty-input-box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .qty-btn { width:32px; height:32px; background:#f7f9fb; border:none; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:700; color:var(--navy); cursor:pointer; }
+    .qty-input-box { width:44px; height:32px; border:none; text-align:center; font-weight:700; color:var(--navy); outline:none; }
 
-    .empty-cart { padding:48px 20px; text-align:center; color:var(--navy); background:#fff; border-radius:12px; box-shadow:0 12px 32px rgba(9,30,45,0.05); font-size:1.1rem; font-weight:700; }
+    .empty-cart { padding: 60px 20px; text-align: center; background: #fff; border-radius: 16px; box-shadow: 0 12px 32px rgba(9,30,45,0.04); border: 1px solid rgba(11,47,74,0.03); }
+
+    /* สไตล์ช่องส่วนลด */
+    .discount-box { margin-top: 24px; padding-top: 24px; border-top: 1px dashed rgba(11,47,74,0.15); }
+    .discount-input { flex: 1; padding: 12px 14px; border: 1px solid rgba(11,47,74,0.15); border-radius: 8px; font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.2s; }
+    .discount-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(30,144,255,0.1); }
     
-    @media (max-width:900px){ .cart-grid { grid-template-columns: 1fr; } .cart-item { flex-direction:column; align-items:flex-start; } .cart-item .actions { align-items:flex-start; width:100%; flex-direction:row; justify-content:space-between; } }
+    /* แก้ไขปุ่มใช้โค้ด: เอา transform: scale() ออก เพื่อไม่ให้ปุ่มขยับ/กระพริบ */
+    .btn-apply { background: linear-gradient(90deg, #1e2124, #4a5568); color: white; padding: 12px 20px; border-radius: 8px; border: none; font-weight: 800; cursor: pointer; transition: background-color 0.2s; }
+    .btn-apply:hover { background: var(--navy); }
+
+    .active-discount { display: flex; justify-content: space-between; align-items: center; background: #f6fff6; border: 1px solid rgba(18,122,59,0.2); padding: 12px 16px; border-radius: 8px; color: #127a3b; font-weight: 700; font-size: 0.95rem; }
+
+    @media (max-width:900px){ .cart-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <?php if (file_exists(__DIR__ . '/navbar.php')) include __DIR__ . '/navbar.php'; ?>
 
   <main class="container cart-page">
-
     <?php if (empty($cartItems)): ?>
-      <h1 style="margin-bottom:24px; font-weight:800; font-size:1.8rem;">ตะกร้าของฉัน</h1>
-      <div class="empty-cart card">
-        <div style="margin-bottom:16px;">ตะกร้าของคุณยังไม่มีสินค้า 🛒</div>
-        <a class="btn btn-primary" href="index.php">ไปเลือกซื้อสินค้ากันเลย</a>
+      
+      <div style="max-width: 600px; margin: 0 auto;">
+        <h1 style="margin-bottom:24px; font-weight:800; font-size:1.8rem; color:var(--navy);">ตะกร้าของฉัน</h1>
+        <div class="empty-cart">
+          <div style="font-size: 4rem; margin-bottom: 16px;">🛒</div>
+          <div style="margin-bottom:24px; color: var(--navy); font-size: 1.15rem; font-weight: 700;">ตะกร้าของคุณยังไม่มีสินค้า</div>
+          <a class="btn btn-primary" href="index.php" style="padding: 14px 32px; font-size: 1.05rem;">ไปเลือกซื้อสินค้ากันเลย</a>
+        </div>
       </div>
+
     <?php else: ?>
       <div class="cart-grid">
         <div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h1 style="margin:0; font-weight:800; font-size:1.8rem;">ตะกร้าของฉัน</h1>
             <form method="post" action="cart.php" style="margin:0;">
-              <button type="submit" name="clear_cart" class="btn btn-clear" onclick="return confirm('ต้องการล้างตะกร้าทั้งหมดหรือไม่?')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                ล้างตะกร้าทั้งหมด
-              </button>
+            <button type="submit" name="clear_cart" class="btn btn-clear" onclick="return confirm('ต้องการล้างตะกร้าทั้งหมดหรือไม่?')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            ล้างตะกร้าทั้งหมด
+            </button>
             </form>
           </div>
 
           <div class="cart-items">
             <?php foreach ($cartItems as $it): ?>
-              <div class="cart-item" data-product-id="<?php echo h($it['id']); ?>">
-                <div class="thumb" aria-hidden="true">
+              <div class="cart-item">
+                <div class="thumb">
                   <?php if (!empty($it['image_url'])): ?>
-                    <img src="<?php echo h($it['image_url']); ?>" alt="<?php echo h($it['name']); ?>" style="max-width:85%;max-height:85%;display:block;object-fit:contain;">
+                    <img src="<?php echo h($it['image_url']); ?>" alt="" style="max-width:85%;max-height:85%;object-fit:contain;">
                   <?php else: ?>
-                    <div style="color:rgba(11,47,74,0.4);font-size:0.95rem;font-weight:600;">ไม่มีรูปภาพ</div>
+                    <div style="color:#ccc;">ไม่มีรูป</div>
                   <?php endif; ?>
                 </div>
-
                 <div class="meta">
                   <div class="sku">รหัสสินค้า: <?php echo h(formatSKU($it['id'])); ?></div>
                   <div class="title"><?php echo h($it['name']); ?></div>
                   <div class="price"><?php echo ($it['price'] !== null) ? h(fmtPrice($it['price'])) . ' ฿' : 'สอบถามราคา'; ?></div>
-                  <?php if ($it['line_total'] !== null): ?>
-                    <div class="muted" style="font-weight:600; margin-top:4px; font-size:0.9rem;">ราคารวม: <span style="color:var(--navy);"><?php echo h(fmtPrice($it['line_total'])); ?> ฿</span></div>
-                  <?php endif; ?>
                 </div>
-
                 <div class="actions">
-                  
                   <div class="qty-control">
                     <form method="post" action="cart.php" style="display:flex;">
-                      <input type="hidden" name="update_qty" value="1">
-                      <input type="hidden" name="pid" value="<?php echo h($it['id']); ?>">
-                      <input type="hidden" name="qty" value="<?php echo (int)$it['qty'] - 1; ?>">
-                      <button type="submit" class="qty-btn" aria-label="ลดจำนวน">−</button>
+                      <input type="hidden" name="update_qty" value="1"><input type="hidden" name="pid" value="<?php echo h($it['id']); ?>"><input type="hidden" name="qty" value="<?php echo (int)$it['qty'] - 1; ?>">
+                      <button type="submit" class="qty-btn">−</button>
                     </form>
-
-                    <input type="number" value="<?php echo (int)$it['qty']; ?>" class="qty-input-box" readonly />
-
+                    <input type="number" value="<?php echo (int)$it['qty']; ?>" class="qty-input-box" readonly>
                     <form method="post" action="cart.php" style="display:flex;">
-                      <input type="hidden" name="update_qty" value="1">
-                      <input type="hidden" name="pid" value="<?php echo h($it['id']); ?>">
-                      <input type="hidden" name="qty" value="<?php echo (int)$it['qty'] + 1; ?>">
-                      <button type="submit" class="qty-btn" aria-label="เพิ่มจำนวน">+</button>
+                      <input type="hidden" name="update_qty" value="1"><input type="hidden" name="pid" value="<?php echo h($it['id']); ?>"><input type="hidden" name="qty" value="<?php echo (int)$it['qty'] + 1; ?>">
+                      <button type="submit" class="qty-btn">+</button>
                     </form>
                   </div>
-
-                  <form method="post" action="cart.php" style="margin:0;">
-                    <button type="submit" name="remove" value="<?php echo h($it['id']); ?>" class="btn btn-danger" style="padding:6px 12px;font-size:0.85rem;">ลบ</button>
-                  </form>
-
+                  <form method="post" action="cart.php"><button type="submit" name="remove" value="<?php echo h($it['id']); ?>" class="btn btn-danger" style="padding:6px 12px;font-size:0.85rem;">ลบ</button></form>
                 </div>
               </div>
             <?php endforeach; ?>
@@ -322,33 +351,54 @@ function formatSKU($id) {
         <aside>
           <div class="cart-summary">
             <h3 style="margin:0 0 16px 0; font-weight:800; font-size:1.2rem;">สรุปคำสั่งซื้อ</h3>
-            <div style="display:flex;justify-content:space-between;margin:12px 0;font-weight:600;">
-              <div>ยอดรวม (สินค้า)</div>
-              <div style="color:var(--navy);"><?php echo h(fmtPrice($subtotal)); ?> ฿</div>
+            <div style="display:flex;justify-content:space-between;margin:12px 0;font-weight:600; color:var(--muted);">
+              <div>ยอดรวมสินค้า</div>
+              <div><?php echo h(fmtPrice($subtotal)); ?> ฿</div>
             </div>
 
-            <?php
-              $shipping = 0.00;
-              $tax = 0.00;
-              $grandTotal = $subtotal + $shipping + $tax;
-            ?>
-            <div style="display:flex;justify-content:space-between;margin:12px 0;font-weight:600;">
-              <div>ค่าจัดส่ง</div>
-              <div><?php echo h(fmtPrice($shipping)); ?> ฿</div>
+            <?php if ($discountAmount > 0): ?>
+            <div style="display:flex;justify-content:space-between;margin:12px 0;font-weight:700; color:#127a3b;">
+              <div>ส่วนลด</div>
+              <div>-<?php echo h(fmtPrice($discountAmount)); ?> ฿</div>
             </div>
-            <div style="display:flex;justify-content:space-between;margin:12px 0 16px 0;font-weight:600;">
-              <div>ภาษี</div>
-              <div><?php echo h(fmtPrice($tax)); ?> ฿</div>
+            <?php endif; ?>
+
+            <div style="display:flex;justify-content:space-between;border-top:2px dashed rgba(11,47,74,0.1);padding-top:16px;margin-top:12px; margin-bottom: 8px;">
+              <div style="font-weight:900; font-size:1.15rem; color:var(--navy);">ยอดรวมสุทธิ</div>
+              <div style="font-weight:900; font-size:1.4rem; color:#ff4d4f;"><?php echo h(fmtPrice($grandTotal)); ?> ฿</div>
             </div>
 
-            <div style="display:flex;justify-content:space-between;border-top:2px dashed rgba(11,47,74,0.1);padding-top:16px;margin-top:12px;">
-              <div style="font-weight:900; font-size:1.15rem;">ยอดที่ต้องชำระ</div>
-              <div style="font-weight:900; font-size:1.2rem; color:#ff4d4f;"><?php echo h(fmtPrice($grandTotal)); ?> ฿</div>
+            <div class="discount-box">
+              <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; color: var(--navy); display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><circle cx="7" cy="7" r="1"></circle></svg>
+                เพิ่มรหัสส่วนลด
+              </h4>
+              
+              <?php if ($discountError): ?>
+                <div style="color: #ff4d4f; font-size: 0.85rem; margin-bottom: 8px; font-weight: 600;">❌ โค้ดส่วนลดไม่ถูกต้อง</div>
+              <?php endif; ?>
+
+              <?php if (!$discountCode): ?>
+                <form method="post" action="cart.php" style="display: flex; gap: 8px; margin: 0;">
+                  <input type="text" name="discount_code" class="discount-input" placeholder="พิมพ์รหัสที่นี่...">
+                  <button type="submit" name="apply_discount" value="1" class="btn-apply">ใช้โค้ด</button>
+                </form>
+              <?php else: ?>
+                <div class="active-discount">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <?php echo h($discountCode); ?>
+                  </div>
+                  <form method="post" action="cart.php" style="margin: 0;">
+                    <button type="submit" name="remove_discount" value="1" style="background:none; border:none; color:#ff4d4f; cursor:pointer; font-weight:700;">นำออก</button>
+                  </form>
+                </div>
+              <?php endif; ?>
             </div>
 
-            <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
-              <a class="btn btn-primary" href="checkout.php" style="width:100%; font-size:1rem;">ดำเนินการชำระเงิน</a>
-              <a class="btn btn-outline" href="index.php" style="width:100%;">เลือกสินค้าเพิ่มเติม</a>
+            <div style="margin-top:24px; display:flex; flex-direction:column; gap:12px;">
+              <a class="btn btn-primary" href="checkout.php" style="width:100%; font-size:1.1rem; padding: 14px;">ดำเนินการชำระเงิน</a>
+              <a class="btn btn-outline" href="index.php" style="width:100%; padding: 12px;">กลับไปเลือกซื้อสินค้า</a>
             </div>
           </div>
         </aside>
@@ -357,7 +407,7 @@ function formatSKU($id) {
   </main>
 
   <?php if (file_exists(__DIR__ . '/footer.php')) include __DIR__ . '/footer.php'; ?>
-
+  
   <script>
     (function(){
         const LOCAL_CART_KEY = 'site_cart_v1';

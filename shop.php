@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+session_start();
 
 // shop.php - หน้าแสดงสินค้า + API (ajax=1 คืน JSON)
 // ใช้ config.php ที่มีฟังก์ชัน getPDO()

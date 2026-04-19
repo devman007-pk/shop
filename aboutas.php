@@ -1,4 +1,5 @@
 <?php
+session_start();
 // aboutas.php - Company profile page (visual refresh) - namespaced styles to avoid overriding navbar
 ?>
 <!doctype html>

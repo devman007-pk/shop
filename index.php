@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+session_start();
 
 $brands = [];
 $products = [];
@@ -132,7 +133,6 @@ function formatPrice($p) {
         max-width: 600px; 
         width: 100%; 
         text-align: left;
-        /* === ดันปุ่มลงมาให้ต่ำกว่าเดิม === */
         margin-top: 200px; 
     }
     
@@ -206,7 +206,6 @@ function formatPrice($p) {
         .hero-arrow.next { right: 10px; }
         .btn-hero { padding: 8px 20px; font-size: 0.95rem; }
         .hero-slide { padding: 0 5%; justify-content: center; }
-        /* === ดันปุ่มลงมาสำหรับหน้าจอมือถือ === */
         .hero-slide-content { text-align: center; margin-top: 80px; }
     }
   </style>
@@ -214,10 +213,9 @@ function formatPrice($p) {
 <body>
 
   <?php
+  // แก้ไขตรงนี้: ลบ else ที่แสดง <h1>Brand</h1> ออกไปแล้ว
   if (file_exists(__DIR__ . '/navbar.php')) {
       include __DIR__ . '/navbar.php';
-  } else {
-      echo '<header style="padding:20px;"><h1>Brand</h1></header>';
   }
   ?>
 
@@ -289,7 +287,7 @@ function formatPrice($p) {
     <section id="shop" class="container section">
       <div class="carousel-box">
         <div class="section-header">
-          <h2 class="section-title">สินค้าแนะนำ</h2>
+          <h2 class="section-title">สินค้าใหม่</h2>
           <a class="see-more" href="shop.php">ดูเพิ่มเติม</a>
         </div>
 
@@ -342,7 +340,7 @@ function formatPrice($p) {
     <section id="wifi" class="container section">
       <div class="carousel-box">
         <div class="section-header">
-          <h2 class="section-title">กล้องวงจรปิด WIFI</h2>
+          <h2 class="section-title">สินค้าแนะนำ</h2>
           <a class="see-more" href="shop.php">ดูเพิ่มเติม</a>
         </div>
 

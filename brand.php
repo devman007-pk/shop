@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+session_start();
 
 // brand.php - Brand listing page (robust version)
 // - Shows brand tiles (logo + name + product count)
