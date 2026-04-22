@@ -297,7 +297,7 @@ function formatSKU($id) {
         <div class="empty-cart">
           <div style="font-size: 4rem; margin-bottom: 16px;">🛒</div>
           <div style="margin-bottom:24px; color: var(--navy); font-size: 1.15rem; font-weight: 700;">ตะกร้าของคุณยังไม่มีสินค้า</div>
-          <a class="btn btn-primary" href="index.php" style="padding: 14px 32px; font-size: 1.05rem;">ไปเลือกซื้อสินค้ากันเลย</a>
+          <a class="btn btn-primary" href="shop.php" style="padding: 14px 32px; font-size: 1.05rem;">ไปเลือกซื้อสินค้า</a>
         </div>
       </div>
 

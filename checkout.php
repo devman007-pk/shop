@@ -218,7 +218,7 @@ function formatSKU($id) {
 
             <label class="checkbox-container">
               <input type="checkbox" id="req_tax_invoice" name="req_tax_invoice" value="1">
-              ต้องการขอใบกำกับภาษีเต็มรูปแบบ
+              จัดส่งไปที่อยู่อื่น?
             </label>
 
             <div class="tax-invoice-form" id="tax_invoice_fields">
@@ -239,13 +239,6 @@ function formatSKU($id) {
                 <div class="form-group full-width">
                   <label>ชื่อบริษัท (ถ้ามี)</label>
                   <input type="text" name="tax_company_name" placeholder="บริษัท ตัวอย่าง จำกัด">
-                </div>
-              </div>
-
-              <div class="form-grid">
-                <div class="form-group full-width">
-                  <label>เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
-                  <input type="text" name="tax_id" placeholder="เลข 13 หลัก" pattern="[0-9]{13}" maxlength="13" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
               </div>
 

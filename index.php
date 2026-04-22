@@ -4,6 +4,7 @@ session_start();
 
 $brands = [];
 $products = [];
+$recommendedProducts = []; // เพิ่มตัวแปรสำหรับสินค้าแนะนำ
 
 // load config if exists
 $configLoaded = false;
@@ -17,15 +18,27 @@ if (file_exists(__DIR__ . '/config.php')) {
             $stmt = $pdo->query("SELECT id, name, logo_url, NULL AS product_count FROM brands LIMIT 12");
             $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // products
+            // products (สินค้าใหม่)
             $stmt = $pdo->query("
                 SELECT p.id, p.name, p.price,
                 (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.position ASC LIMIT 1) AS image_url
                 FROM products p 
-                WHERE p.is_active = 1 
+                WHERE p.is_active = 1 AND p.is_new_product = 1
+                ORDER BY p.id DESC
                 LIMIT 12
             ");
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // recommended products (สินค้าแนะนำ ดึงแบบสุ่ม)
+            $stmtRec = $pdo->query("
+                SELECT p.id, p.name, p.price,
+                (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.position ASC LIMIT 1) AS image_url
+                FROM products p 
+                WHERE p.is_active = 1 AND p.is_recommended = 1
+                ORDER BY RAND()
+                LIMIT 12
+            ");
+            $recommendedProducts = $stmtRec->fetchAll(PDO::FETCH_ASSOC);
 
             $configLoaded = true;
         } catch (Throwable $e) {
@@ -49,10 +62,13 @@ if (!$configLoaded) {
         ['id' => 'p3', 'name' => 'สินค้า ตัวอย่าง 3', 'image_url' => null, 'price' => 459.00],
         ['id' => 'p4', 'name' => 'สินค้า ตัวอย่าง 4', 'image_url' => null, 'price' => 9999.00],
     ];
+    $recommendedProducts = $products;
 }
 
 // ensure we have 12 products
 $desiredTotal = 12;
+
+// ปั๊มให้สินค้าใหม่ครบ 12 ชิ้น
 if (count($products) > 0) {
     $i = 0;
     while (count($products) < $desiredTotal) {
@@ -65,12 +81,25 @@ if (count($products) > 0) {
     }
 } else {
     for ($k = 1; $k <= $desiredTotal; $k++) {
-        $products[] = [
-            'id' => 'ph' . $k,
-            'name' => 'สินค้า ตัวอย่าง ' . $k,
-            'image_url' => null,
-            'price' => null
-        ];
+        $products[] = ['id' => 'ph' . $k, 'name' => 'สินค้า ตัวอย่าง ' . $k, 'image_url' => null, 'price' => null];
+    }
+}
+
+// ปั๊มให้สินค้าแนะนำครบ 12 ชิ้น
+if (count($recommendedProducts) > 0) {
+    $i = 0;
+    while (count($recommendedProducts) < $desiredTotal) {
+        $src = $recommendedProducts[$i % count($recommendedProducts)];
+        $clone = $src;
+        $clone['id'] = (string)$src['id'] . '-c' . (int)count($recommendedProducts);
+        $recommendedProducts[] = $clone;
+        $i++;
+        if ($i > 1000) break;
+    }
+} else {
+    // ถ้าแอดมินยังไม่ได้ติ๊กเลยแม้แต่ชิ้นเดียว ให้โชว์กรอบเปล่าๆ เขียนว่า "รอแอดมินเลือก"
+    for ($k = 1; $k <= $desiredTotal; $k++) {
+        $recommendedProducts[] = ['id' => 'ph' . $k, 'name' => 'รอแอดมินเลือก', 'image_url' => null, 'price' => null];
     }
 }
 
@@ -344,32 +373,44 @@ function formatPrice($p) {
           <a class="see-more" href="shop.php">ดูเพิ่มเติม</a>
         </div>
 
-        <div class="carousel" data-carousel data-per-page="4" data-autoplay="true" data-autoplay-interval="2800">
-          <button class="carousel-btn prev" aria-label="เลื่อนกลับ">‹</button>
-          <div class="carousel-track" role="list">
-            <?php for ($i = 1; $i <= 12; $i++): ?>
+        <div class="carousel-track" role="list">
+            <?php foreach ($recommendedProducts as $rp): ?>
               <div class="carousel-item" role="listitem">
-                <div class="product-card" data-product-id="wifi-<?php echo $i; ?>">
-                  <div class="product-thumb empty-thumb">
-                    <span class="thumb-label">สินค้า</span>
+                <article class="product-card" data-product-id="<?php echo h($rp['id']); ?>">
+                  <div class="product-thumb <?php echo empty($rp['image_url']) ? 'empty-thumb' : ''; ?>">
+                    <?php if (!empty($rp['image_url'])): ?>
+                      <img src="<?php echo h($rp['image_url']); ?>" alt="<?php echo h($rp['name']); ?>">
+                    <?php else: ?>
+                      <span class="thumb-label">รูปสินค้า</span>
+                    <?php endif; ?>
                     
-                    <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="wifi-<?php echo $i; ?>">
+                    <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="<?php echo h($rp['id']); ?>">
                       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12.1 21s-7.6-4.8-9.5-7.1C-0.6 11.5 2.2 6.6 6.6 6.6c2.3 0 3.9 1.5 4.9 2.6 1-1.1 2.6-2.6 4.9-2.6 4.4 0 7.2 4.9 3.9 7.3-1.9 2.3-9.5 7.1-9.5 7.1z" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
                   </div>
-                  <h3 class="prod-title">WIFI <?php echo $i; ?></h3>
-                  <div class="product-price">999,999.00 ฿</div>
+
+                  <h3 class="prod-title"><?php echo h($rp['name']); ?></h3>
+
+                  <?php $fmtRec = formatPrice(isset($rp['price']) ? $rp['price'] : null); ?>
+                  <div class="product-price">
+                    <?php if ($fmtRec !== null): ?>
+                      <?php echo h($fmtRec); ?> ฿
+                    <?php else: ?>
+                      สอบถามราคา
+                    <?php endif; ?>
+                  </div>
+
                   <div class="card-actions">
-                    <button class="add-cart btn-icon" type="button" data-id="wifi-<?php echo $i; ?>">
+                    <button class="add-cart btn-icon" type="button" data-id="<?php echo h($rp['id']); ?>">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                       เพิ่มในตะกร้า
                     </button>
                   </div>
-                </div>
+                </article>
               </div>
-            <?php endfor; ?>
+            <?php endforeach; ?>
           </div>
           <button class="carousel-btn next" aria-label="เลื่อนถัดไป">›</button>
         </div>

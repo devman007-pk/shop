@@ -1,13 +1,48 @@
 <?php
-// contactus.php - Contact page with QR (image/line.png)
-// Updated: align company name with other lines, make email/phone same color and remove underline.
+// contactus.php - Contact page with dynamic DB integration
+session_start();
+
+// ฟังก์ชันสำหรับป้องกันตัวอักษรพิเศษ
+if (!function_exists('h')) {
+    function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+}
+
+$contact = null;
+$dbError = null;
+
+// เชื่อมต่อฐานข้อมูลและดึงข้อมูลจากตาราง contact_us
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+    try {
+        $pdo = getPDO();
+        $stmt = $pdo->query("SELECT * FROM contact_us WHERE id = 1");
+        $contact = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $dbError = $e->getMessage();
+    }
+}
+
+// ข้อมูลสำรอง (Fallback) กรณีฐานข้อมูลไม่มีข้อมูล หรือ ดึงข้อมูลไม่สำเร็จ
+if (!$contact) {
+    $contact = [
+        'company_name' => 'บริษัท ออน ไทม์ แมนเนจเม้นท์ จำกัด (สำนักงานใหญ่)',
+        'address' => 'เลขที่ 50/123 หมู่ที่ 7 ตำบล เนินพระ อำเภอ/เขต เมืองระยอง จังหวัด ระยอง 21000',
+        'tax_id' => '0215562008121',
+        'email' => 'navapat@otm.co.th',
+        'phone' => '033-013917',
+        'qr_code_url' => 'image/line.png'
+    ];
+}
+
+// เตรียมเบอร์โทรสำหรับลิงก์ (ตัดขีดออกให้เหลือแต่ตัวเลข)
+$phone_link = preg_replace('/[^0-9]/', '', $contact['phone'] ?? '');
 ?>
 <!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ติดต่อเรา - บริษัท ออน ไทม์ แมนเนจเม้นท์ จำกัด</title>
+  <title>ติดต่อเรา - <?php echo h($contact['company_name'] ?? 'บริษัท ออน ไทม์ แมนเนจเม้นท์ จำกัด'); ?></title>
 
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -87,7 +122,7 @@
       background:#fff;
       box-shadow: 0 8px 22px rgba(11,47,74,0.06);
     }
-    .qr-box img { max-width:100%; max-height:100%; display:block; }
+    .qr-box img { max-width:100%; max-height:100%; display:block; object-fit: contain; }
 
     /* thin divider */
     .contact-divider {
@@ -135,20 +170,30 @@
   <main class="container">
     <div class="contact-hero" role="region" aria-label="ข้อมูลการติดต่อ">
       <div class="info">
-        <div class="company-name">บริษัท ออน ไทม์ แมนเนจเม้นท์ จำกัด (สำนักงานใหญ่)</div>
+        <div class="company-name"><?php echo h($contact['company_name'] ?? ''); ?></div>
 
-        <p>เลขที่ 50/123 หมู่ที่ 7 ตำบล เนินพระ อำเภอ/เขต เมืองระยอง จังหวัด ระยอง 21000</p>
-        <p>เลขที่ผู้เสียภาษี: 0215562008121</p>
-        <p>Email: <a href="mailto:navapat@otm.co.th">navapat@otm.co.th</a></p>
-        <p>โทร: <a href="tel:033013917">033-013917</a></p>
+        <p><?php echo nl2br(h($contact['address'] ?? '')); ?></p>
+        
+        <?php if(!empty($contact['tax_id'])): ?>
+            <p>เลขที่ผู้เสียภาษี: <?php echo h($contact['tax_id']); ?></p>
+        <?php endif; ?>
+        
+        <?php if(!empty($contact['email'])): ?>
+            <p>Email: <a href="mailto:<?php echo h($contact['email']); ?>"><?php echo h($contact['email']); ?></a></p>
+        <?php endif; ?>
+        
+        <?php if(!empty($contact['phone'])): ?>
+            <p>โทร: <a href="tel:<?php echo h($phone_link); ?>"><?php echo h($contact['phone']); ?></a></p>
+        <?php endif; ?>
       </div>
 
       <div class="qr-wrap" aria-hidden="false">
         <div class="qr-box" role="img" aria-label="QR LINE: สแกนเพื่อติดต่อ">
-          <?php if (file_exists(__DIR__ . '/image/line.png')): ?>
+          <?php if (!empty($contact['qr_code_url']) && file_exists(__DIR__ . '/' . $contact['qr_code_url'])): ?>
+            <img src="<?php echo h($contact['qr_code_url']); ?>" alt="QR LINE">
+          <?php elseif (file_exists(__DIR__ . '/image/line.png')): ?>
             <img src="image/line.png" alt="QR LINE">
           <?php else: ?>
-            <!-- fallback placeholder -->
             <img src="https://via.placeholder.com/200?text=QR" alt="QR placeholder">
           <?php endif; ?>
         </div>

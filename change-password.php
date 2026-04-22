@@ -78,6 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="input-row">
           <label>ยืนยันรหัสผ่านใหม่</label>
           <input type="password" name="confirm_password" id="conf_p" required>
+          <span class="toggle-eye" onclick="togglePass('conf_p')" title="แสดง/ซ่อนรหัสผ่าน">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </span>
         </div>
         <button type="submit" class="btn-primary" style="width:100%; padding:14px; border-radius:10px; border:0; background:var(--navy); color:#fff; font-weight:800; cursor:pointer;">อัปเดตรหัสผ่าน</button>
       </form>

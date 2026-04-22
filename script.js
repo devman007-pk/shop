@@ -1,4 +1,4 @@
-// script.js - Fixed Carousel Pointer Bug & Dynamic Cart
+// script.js - Fixed Realtime Sync & Cart Animations
 (function () {
   'use strict';
 
@@ -24,26 +24,50 @@
     localStorage.setItem(CART_KEY, JSON.stringify(arr));
   }
 
-  // --- 2. Sync UI (สั่งเปลี่ยนสีหัวใจ และอัปเดตเลขตะกร้า) ---
-  function syncAllHearts() {
-    const savedWish = getWishlist();
-    document.querySelectorAll('.wish-count, .count-badge.wish').forEach(b => b.textContent = savedWish.length);
+  // --- แอนิเมชันเด้งตัวเลขเวลาถูกอัปเดต ---
+  function animateBadge(badge) {
+    badge.style.transform = 'scale(1.5)';
+    badge.style.transition = 'transform 0.2s ease-out';
+    setTimeout(() => { badge.style.transform = 'scale(1)'; }, 200);
+  }
 
+  // --- 2. Sync UI (สั่งเปลี่ยนสีหัวใจ และอัปเดตเลขตะกร้า เรียลไทม์) ---
+  function syncAllHearts(animate = false) {
+    const savedWish = getWishlist();
+    
+    // อัปเดตตัวเลขหัวใจด้านบน Navbar
+    document.querySelectorAll('.wish-count, .count-badge.wish').forEach(b => {
+      if (b.textContent !== savedWish.length.toString()) {
+        b.textContent = savedWish.length;
+        if (animate) animateBadge(b);
+      }
+    });
+
+    // เปลี่ยนสีปุ่มหัวใจที่รูปสินค้า
     document.querySelectorAll('.fav-btn').forEach(btn => {
       const pid = btn.dataset.pid || (btn.closest('.product-card') && btn.closest('.product-card').dataset.productId);
       if (pid) {
         if (savedWish.includes(String(pid))) {
           btn.classList.add('active'); 
+          btn.style.color = '#ff4d4f'; // เปลี่ยนเป็นสีแดงเมื่อกดใจ
         } else {
           btn.classList.remove('active'); 
+          btn.style.color = ''; // กลับเป็นสีเดิม
         }
       }
     });
   }
 
-  function syncCartCount() {
+  function syncCartCount(animate = false) {
     const savedCart = getCart();
-    document.querySelectorAll('.cart-count').forEach(b => b.textContent = savedCart.length);
+    
+    // อัปเดตตัวเลขตะกร้าด้านบน Navbar
+    document.querySelectorAll('.cart-count').forEach(b => {
+      if (b.textContent !== savedCart.length.toString()) {
+        b.textContent = savedCart.length;
+        if (animate) animateBadge(b);
+      }
+    });
   }
 
   // --- 3. ดักจับการกดหัวใจ และ ตะกร้าสินค้า ---
@@ -60,20 +84,20 @@
 
       let saved = getWishlist();
       if (saved.includes(String(pid))) {
-        saved = saved.filter(id => id !== String(pid));
+        saved = saved.filter(id => id !== String(pid)); // เอาออก
       } else {
-        saved.push(String(pid));
+        saved.push(String(pid)); // เพิ่มเข้า
       }
       
       saveWishlist(saved);
-      syncAllHearts(); 
+      syncAllHearts(true); // สั่งให้อัปเดตและเล่นแอนิเมชันทันที
       return;
     }
 
     // --- ถ้ากดปุ่มตะกร้า ---
     const cartBtn = e.target.closest('.add-cart, .btn-add');
     if (cartBtn) {
-      e.preventDefault(); // ป้องกันการเด้งไปหน้า cart.php ทันที
+      e.preventDefault(); 
       e.stopPropagation();
 
       const pid = cartBtn.dataset.id || (cartBtn.closest('.product-card') && cartBtn.closest('.product-card').dataset.productId);
@@ -81,25 +105,23 @@
         let cart = getCart();
         const originalHtml = cartBtn.innerHTML;
 
-        // เช็คว่าสินค้านี้อยู่ในตะกร้าแล้วหรือยัง
         if (!cart.includes(String(pid))) {
-          cart.push(String(pid)); // ยังไม่มี ให้เพิ่มเข้าไป
+          cart.push(String(pid)); 
           saveCart(cart);
-          syncCartCount(); // อัปเดตตัวเลข Navbar ทันที
+          syncCartCount(true); // สั่งให้อัปเดตและเล่นแอนิเมชันทันที
           
           cartBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> เพิ่มแล้ว!';
         } else {
-          // ถ้ามีอยู่แล้ว แจ้งเตือนลูกค้า
           cartBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> มีในตะกร้าแล้ว!';
         }
 
-        // เปลี่ยนสีปุ่มชั่วคราว
         cartBtn.style.background = 'linear-gradient(90deg, #2bb673, #1e90ff)';
+        cartBtn.style.color = '#fff';
         
-        // คืนค่ากลับเป็นปุ่มเดิมใน 1.5 วินาที
         setTimeout(() => {
           cartBtn.innerHTML = originalHtml;
           cartBtn.style.background = ''; 
+          cartBtn.style.color = '';
         }, 1500);
       }
     }
@@ -259,13 +281,15 @@
 
     if (typeof window.SHOP_API !== 'undefined') loadProducts({ page: 1 });
 
-    setTimeout(() => {
-      syncAllHearts();
-      syncCartCount(); // อัปเดตตัวเลขตะกร้าตอนโหลดเว็บ
-    }, 100);
+    // สั่งให้อัปเดตตัวเลขหน้าจอบน Navbar ทันทีที่โหลดเว็บเสร็จ
+    syncAllHearts(false);
+    syncCartCount(false);
   }
 
-  document.addEventListener('DOMContentLoaded', initAll);
+  // เรียกใช้ initAll ทันทีเมื่อ DOM พร้อม
+  document.addEventListener('DOMContentLoaded', () => {
+    requestAnimationFrame(initAll);
+  });
 
   const mo = new MutationObserver(muts => {
     let hasNewCards = false;
@@ -276,7 +300,7 @@
         }
       });
     });
-    if (hasNewCards) syncAllHearts();
+    if (hasNewCards) syncAllHearts(false);
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
 
