@@ -4,8 +4,9 @@ session_start();
 require_once __DIR__ . '/config.php';
 
 // ตรวจสอบสิทธิ์ Admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header("Location: admin-login.php");
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    // ถ้าไม่ใช่แอดมิน หรือไม่ได้ล็อกอิน ให้ส่งกลับไปหน้าล็อกอินแอดมินทันที
+    header("Location: admin-login.php"); 
     exit;
 }
 

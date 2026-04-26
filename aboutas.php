@@ -2,6 +2,14 @@
 session_start();
 // aboutas.php - Company profile page (เชื่อมต่อฐานข้อมูลแล้ว)
 
+// 1. สั่งห้ามเบราว์เซอร์จำหน้าเว็บ (Anti-Cache) เพื่อแก้ปัญหากดย้อนกลับหลัง Logout
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+require_once __DIR__ . '/config.php';
+// ... (โค้ดอื่นๆ ของหน้านั้นๆ ตามปกติ) ...
+
 $about = null;
 if (file_exists(__DIR__ . '/config.php')) {
     require_once __DIR__ . '/config.php';

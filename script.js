@@ -1,4 +1,4 @@
-// script.js - Fixed Realtime Sync & Cart Animations
+// script.js - Fixed Realtime Sync, Cart Animations & Pagination
 (function () {
   'use strict';
 
@@ -24,18 +24,15 @@
     localStorage.setItem(CART_KEY, JSON.stringify(arr));
   }
 
-  // --- แอนิเมชันเด้งตัวเลขเวลาถูกอัปเดต ---
   function animateBadge(badge) {
     badge.style.transform = 'scale(1.5)';
     badge.style.transition = 'transform 0.2s ease-out';
     setTimeout(() => { badge.style.transform = 'scale(1)'; }, 200);
   }
 
-  // --- 2. Sync UI (สั่งเปลี่ยนสีหัวใจ และอัปเดตเลขตะกร้า เรียลไทม์) ---
+  // --- 2. Sync UI ---
   function syncAllHearts(animate = false) {
     const savedWish = getWishlist();
-    
-    // อัปเดตตัวเลขหัวใจด้านบน Navbar
     document.querySelectorAll('.wish-count, .count-badge.wish').forEach(b => {
       if (b.textContent !== savedWish.length.toString()) {
         b.textContent = savedWish.length;
@@ -43,16 +40,15 @@
       }
     });
 
-    // เปลี่ยนสีปุ่มหัวใจที่รูปสินค้า
     document.querySelectorAll('.fav-btn').forEach(btn => {
       const pid = btn.dataset.pid || (btn.closest('.product-card') && btn.closest('.product-card').dataset.productId);
       if (pid) {
         if (savedWish.includes(String(pid))) {
           btn.classList.add('active'); 
-          btn.style.color = '#ff4d4f'; // เปลี่ยนเป็นสีแดงเมื่อกดใจ
+          btn.style.color = '#ff4d4f';
         } else {
           btn.classList.remove('active'); 
-          btn.style.color = ''; // กลับเป็นสีเดิม
+          btn.style.color = ''; 
         }
       }
     });
@@ -60,8 +56,6 @@
 
   function syncCartCount(animate = false) {
     const savedCart = getCart();
-    
-    // อัปเดตตัวเลขตะกร้าด้านบน Navbar
     document.querySelectorAll('.cart-count').forEach(b => {
       if (b.textContent !== savedCart.length.toString()) {
         b.textContent = savedCart.length;
@@ -72,52 +66,36 @@
 
   // --- 3. ดักจับการกดหัวใจ และ ตะกร้าสินค้า ---
   document.addEventListener('click', function(e) {
-    
-    // --- ถ้ากดปุ่มหัวใจ ---
     const favBtn = e.target.closest('.fav-btn');
     if (favBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-
+      e.preventDefault(); e.stopPropagation();
       const pid = favBtn.dataset.pid || (favBtn.closest('.product-card') && favBtn.closest('.product-card').dataset.productId);
       if (!pid) return;
-
       let saved = getWishlist();
-      if (saved.includes(String(pid))) {
-        saved = saved.filter(id => id !== String(pid)); // เอาออก
-      } else {
-        saved.push(String(pid)); // เพิ่มเข้า
-      }
-      
+      if (saved.includes(String(pid))) { saved = saved.filter(id => id !== String(pid)); } 
+      else { saved.push(String(pid)); }
       saveWishlist(saved);
-      syncAllHearts(true); // สั่งให้อัปเดตและเล่นแอนิเมชันทันที
+      syncAllHearts(true); 
       return;
     }
 
-    // --- ถ้ากดปุ่มตะกร้า ---
     const cartBtn = e.target.closest('.add-cart, .btn-add');
     if (cartBtn) {
-      e.preventDefault(); 
-      e.stopPropagation();
-
+      e.preventDefault(); e.stopPropagation();
       const pid = cartBtn.dataset.id || (cartBtn.closest('.product-card') && cartBtn.closest('.product-card').dataset.productId);
       if (pid) {
         let cart = getCart();
         const originalHtml = cartBtn.innerHTML;
-
         if (!cart.includes(String(pid))) {
           cart.push(String(pid)); 
           saveCart(cart);
-          syncCartCount(true); // สั่งให้อัปเดตและเล่นแอนิเมชันทันที
-          
+          syncCartCount(true); 
           cartBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> เพิ่มแล้ว!';
         } else {
           cartBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> มีในตะกร้าแล้ว!';
         }
-
         cartBtn.style.background = 'linear-gradient(90deg, #2bb673, #1e90ff)';
         cartBtn.style.color = '#fff';
-        
         setTimeout(() => {
           cartBtn.innerHTML = originalHtml;
           cartBtn.style.background = ''; 
@@ -127,7 +105,7 @@
     }
   });
 
-  // --- 4. แก้ปัญหา Carousel (สไลด์แย่งคลิก) ---
+  // --- 4. แก้ปัญหา Carousel ---
   function initCarousels() {
     document.querySelectorAll('[data-carousel]').forEach(carousel => {
       const track = carousel.querySelector('.carousel-track');
@@ -168,14 +146,12 @@
       if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); nextPage(true); });
 
       let startX = 0, startScroll = 0;
-      
       track.addEventListener('pointerdown', (e) => { 
         if (e.target.closest('button, a, .fav-btn')) return; 
         isDragging = true; startX = e.clientX; startScroll = track.scrollLeft; 
         try { track.setPointerCapture(e.pointerId); } catch (e) {} 
         lastInteraction = Date.now(); stopAutoplay(); 
       });
-      
       track.addEventListener('pointermove', (e) => { if (!isDragging) return; track.scrollLeft = startScroll - (e.clientX - startX); });
       function endDrag(e) { if (!isDragging) return; isDragging = false; try { track.releasePointerCapture(e.pointerId); } catch (err) {} recalc(); scrollToPage(Math.round((track.scrollLeft || 0) / (pageW || 1)), 'smooth'); lastInteraction = Date.now(); if (autoplay) startAutoplay(); }
       track.addEventListener('pointerup', endDrag);
@@ -202,25 +178,24 @@
         if (!sect) return;
         sect.classList.toggle('collapsed');
         if (body) {
-          if (sect.classList.contains('collapsed')) {
-            body.style.maxHeight = '0';
-            body.style.opacity = '0';
-          } else {
-            body.style.maxHeight = '900px';
-            body.style.opacity = '1';
-          }
+          if (sect.classList.contains('collapsed')) { body.style.maxHeight = '0'; body.style.opacity = '0'; } 
+          else { body.style.maxHeight = '900px'; body.style.opacity = '1'; }
         }
       });
     });
   }
 
-  // --- 6. โหลดสินค้าด้วย AJAX ---
-  let perPage = 12;
+  // --- 6. โหลดสินค้าด้วย AJAX พร้อมระบบแบ่งหน้า (Pagination) ---
+  let perPage = 15; // ⚡ ตั้งค่า 1 หน้า = 15 ชิ้น
+  let currentFilters = {}; // เก็บค่าตัวกรองปัจจุบัน
+
   function formatPrice(n) { try { return new Intl.NumberFormat('th-TH').format(Number(n)); } catch (e) { return String(n); } }
 
   async function loadProducts(opts = {}) {
+    currentFilters = { ...opts }; // จำค่าไว้เผื่อกดเปลี่ยนหน้า
     const grid = document.getElementById('productGrid'), totalCountEl = document.getElementById('totalCount');
     if (!grid || typeof window.SHOP_API === 'undefined') return;
+    
     const qs = new URLSearchParams();
     qs.set('ajax', '1');
     qs.set('page', opts.page || 1);
@@ -233,10 +208,14 @@
       if (!res.ok) throw new Error('Error ' + res.status);
       const data = await res.json();
       grid.innerHTML = '';
+      
       data.items.forEach(item => {
         const card = document.createElement('article');
         card.className = 'product-card';
         card.dataset.productId = item.id;
+        
+        const priceDisplay = (item.price === null) ? 'สอบถามราคา' : `฿${formatPrice(item.price)}`;
+
         card.innerHTML = `
           <div class="product-thumb">
             <img src="${escapeHtml(item.image_url || '')}" alt="${escapeHtml(item.title || '')}" />
@@ -248,7 +227,9 @@
           </div>
           <div class="product-meta">
             <h3 class="prod-title">${escapeHtml(item.title)}</h3>
-            <div class="product-price">${formatPrice(item.price)} ฿</div>
+            <div class="product-price" style="color: #9B0F06; font-weight: 800; font-size: 1.1rem; margin-top: 8px;">
+                ${priceDisplay}
+            </div>
             <div class="card-actions">
               <button class="add-cart btn-icon" data-id="${escapeHtml(item.id)}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
@@ -259,7 +240,53 @@
         `;
         grid.appendChild(card);
       });
+      
       if (totalCountEl) totalCountEl.textContent = data.total;
+
+      // ---------------------------------------------
+      // ⚡ สร้างปุ่มแบ่งหน้า (Pagination) ต่อท้ายสินค้า
+      // ---------------------------------------------
+      let paginationWrap = document.getElementById('paginationWrap');
+      if (!paginationWrap) {
+          paginationWrap = document.createElement('div');
+          paginationWrap.id = 'paginationWrap';
+          paginationWrap.className = 'pagination-wrap';
+          grid.parentNode.insertBefore(paginationWrap, grid.nextSibling); 
+      }
+
+      const totalPages = Math.max(1, Math.ceil(data.total / data.per_page));
+      const currentPage = data.page;
+
+      let prevDisabled = currentPage <= 1 ? 'disabled' : '';
+      let nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+
+      paginationWrap.innerHTML = `
+          <div class="pagination-controls">
+              <button class="page-btn prev-page" ${prevDisabled}>&laquo; ก่อนหน้า</button>
+              <button class="page-btn next-page" ${nextDisabled}>ถัดไป &raquo;</button>
+          </div>
+          <div class="page-info">หน้า ${currentPage} จาก ${totalPages}</div>
+      `;
+
+      const prevBtn = paginationWrap.querySelector('.prev-page');
+      const nextBtn = paginationWrap.querySelector('.next-page');
+
+      if (prevBtn && !prevDisabled) {
+          prevBtn.addEventListener('click', () => {
+              loadProducts({ ...currentFilters, page: currentPage - 1 });
+              window.scrollTo({ top: document.querySelector('.toolbar').offsetTop - 20, behavior: 'smooth' });
+          });
+      }
+      if (nextBtn && !nextDisabled) {
+          nextBtn.addEventListener('click', () => {
+              loadProducts({ ...currentFilters, page: currentPage + 1 });
+              window.scrollTo({ top: document.querySelector('.toolbar').offsetTop - 20, behavior: 'smooth' });
+          });
+      }
+
+      // ซ่อนปุ่มถ้าไม่มีสินค้าเลย
+      paginationWrap.style.display = data.total > 0 ? 'flex' : 'none';
+
     } catch (err) {}
   }
   window.loadProducts = loadProducts;
@@ -281,23 +308,17 @@
 
     if (typeof window.SHOP_API !== 'undefined') loadProducts({ page: 1 });
 
-    // สั่งให้อัปเดตตัวเลขหน้าจอบน Navbar ทันทีที่โหลดเว็บเสร็จ
     syncAllHearts(false);
     syncCartCount(false);
   }
 
-  // เรียกใช้ initAll ทันทีเมื่อ DOM พร้อม
-  document.addEventListener('DOMContentLoaded', () => {
-    requestAnimationFrame(initAll);
-  });
+  document.addEventListener('DOMContentLoaded', () => { requestAnimationFrame(initAll); });
 
   const mo = new MutationObserver(muts => {
     let hasNewCards = false;
     muts.forEach(m => {
       m.addedNodes && m.addedNodes.forEach(node => {
-        if (node.nodeType === 1 && (node.classList.contains('product-card') || node.querySelector('.product-card'))) {
-          hasNewCards = true;
-        }
+        if (node.nodeType === 1 && (node.classList.contains('product-card') || node.querySelector('.product-card'))) { hasNewCards = true; }
       });
     });
     if (hasNewCards) syncAllHearts(false);

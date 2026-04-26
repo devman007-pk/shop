@@ -1,18 +1,20 @@
 <?php
-// admin-navbar.php - แถบเมนูด้านบนสำหรับระบบหลังบ้าน
+// admin-navbar.php - แถบเมนูด้านบนสำหรับระบบหลังบ้าน (ฉบับปรับปรุงลิงก์ Account)
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
 }
+
+// ดึงชื่อจาก Session ถ้าไม่มีให้ขึ้นว่า Admin
 $adminNameNav = $_SESSION['user_name'] ?? 'Admin';
 
-// ป้องกันการประกาศฟังก์ชัน h() ซ้ำถ้าไฟล์หลักมีอยู่แล้ว
+// ป้องกันการประกาศฟังก์ชัน h_nav ซ้ำ
 if (!function_exists('h_nav')) {
     function h_nav($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 }
 ?>
 <style>
   /* =========================================
-     CSS สำหรับ Admin Navbar โดยเฉพาะ
+     CSS สำหรับ Admin Navbar
      ========================================= */
   .admin-navbar {
       background-color: #1890ff; /* สีน้ำเงินสว่าง */
@@ -23,8 +25,8 @@ if (!function_exists('h_nav')) {
       padding: 0 20px;
       color: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      font-family: 'Noto Sans Thai', sans-serif; /* บังคับใช้ฟอนต์ */
-      position: sticky; /* ให้เมนูติดขอบบนเวลาเลื่อนลง */
+      font-family: 'Noto Sans Thai', sans-serif;
+      position: sticky;
       top: 0;
       z-index: 1000;
   }
@@ -53,10 +55,14 @@ if (!function_exists('h_nav')) {
 </style>
 
 <nav class="admin-navbar">
-  <div class="admin-navbar-brand">ผู้ดูแลรวม (All) - OTM Shop</div>
+  <div class="admin-navbar-brand">ผู้ดูแลรวม - OTM Shop</div>
   <div class="admin-navbar-actions">
       <a href="admin-panel.php" class="btn-nav">กลับหน้าหลัก</a>
-      <a href="#" class="btn-nav btn-nav-blue">สวัสดี, <?php echo h_nav($adminNameNav); ?> (all) ▾</a>
+      
+      <a href="admin-dashboard.php" class="btn-nav btn-nav-blue">
+          สวัสดี, <?php echo h_nav($adminNameNav); ?>
+      </a>
+      
       <a href="admin-logout.php" class="btn-nav btn-nav-red">ออกจากระบบ</a>
   </div>
 </nav>

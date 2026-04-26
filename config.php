@@ -10,7 +10,7 @@ declare(strict_types=1);
 $DB_HOST    = getenv('DB_HOST') ?: 'localhost';
 $DB_NAME    = getenv('DB_NAME') ?: 'shop';
 $DB_USER    = getenv('DB_USER') ?: 'root';
-$DB_PASS    = getenv('DB_PASS') ?: '';
+$DB_PASS    = getenv('DB_PASS') ?: '@Devman007';
 $DB_CHARSET = 'utf8mb4';
 
 function getPDO(): PDO {

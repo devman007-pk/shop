@@ -1,16 +1,24 @@
 <?php
-// admin-add-product.php - หน้าเพิ่มสินค้า (มีระบบ Auto SKU ตามแบรนด์)
+// admin-add-product.php - หน้าเพิ่มสินค้า (เพิ่มระบบ เปิด/ปิด แสดงราคา)
 session_start();
 require_once __DIR__ . '/config.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header("Location: admin-login.php");
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    // ถ้าไม่ใช่แอดมิน หรือไม่ได้ล็อกอิน ให้ส่งกลับไปหน้าล็อกอินแอดมินทันที
+    header("Location: admin-login.php"); 
     exit;
 }
 
 $pdo = getPDO();
 $success_msg = '';
 $error_msg = '';
+
+// เช็คว่ามีคอลัมน์ show_price ในฐานข้อมูลหรือยัง (กัน Error)
+$hasShowPrice = false;
+try {
+    $cols = $pdo->query("SHOW COLUMNS FROM products LIKE 'show_price'")->fetchAll();
+    if (count($cols) > 0) { $hasShowPrice = true; }
+} catch (Exception $e) {}
 
 // ฟังก์ชันสร้าง UUID อัตโนมัติ (เพราะฐานข้อมูลบังคับใส่)
 function generate_uuid() {
@@ -45,8 +53,12 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_name'])) {
     $product_name = trim($_POST['product_name']);
     $product_sku = trim($_POST['product_sku']);
-    $product_price = (float)$_POST['product_price'];
     $product_desc = trim($_POST['product_desc']);
+    
+    // จัดการเรื่องการแสดงราคา
+    $show_price = isset($_POST['show_price']) ? (int)$_POST['show_price'] : 1;
+    // ถ้าเลือกไม่แสดงราคา ให้บันทึกราคาเป็น 0 ไปเลยเพื่อป้องกันความผิดพลาด
+    $product_price = ($show_price === 1) ? (float)$_POST['product_price'] : 0;
     
     // สร้าง UUID และ Slug อัตโนมัติ
     $uuid = generate_uuid();
@@ -89,8 +101,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_name'])) {
             $pdo->beginTransaction();
 
             // 2.1 บันทึกข้อมูลสินค้าหลัก
-            $stmt = $pdo->prepare("INSERT INTO products (uuid, sku, name, slug, price, description) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$uuid, $product_sku, $product_name, $slug, $product_price, $product_desc]);
+            if ($hasShowPrice) {
+                $stmt = $pdo->prepare("INSERT INTO products (uuid, sku, name, slug, price, show_price, description) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$uuid, $product_sku, $product_name, $slug, $product_price, $show_price, $product_desc]);
+            } else {
+                // กรณีลืมเพิ่มคอลัมน์ใน DB
+                $stmt = $pdo->prepare("INSERT INTO products (uuid, sku, name, slug, price, description) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$uuid, $product_sku, $product_name, $slug, $product_price, $product_desc]);
+            }
             $new_product_id = $pdo->lastInsertId();
 
             // 2.2 บันทึกรูปภาพ
@@ -147,6 +165,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     label { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 8px; color: #333; font-size: 0.95rem; }
     input[type="text"], input[type="number"], input[type="file"], textarea { width: 100%; padding: 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 1rem; font-family: inherit; box-sizing: border-box; }
     input[type="text"]:focus, input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    input:disabled { background: #f5f5f5; color: #888; cursor: not-allowed; }
     textarea { resize: vertical; min-height: 100px; }
     
     .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 6px; max-height: 150px; overflow-y: auto; }
@@ -154,6 +173,10 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     .checkbox-label:hover { border-color: var(--primary); }
     .checkbox-label input[type="checkbox"] { cursor: pointer; }
     
+    /* สไตล์ Radio ปุ่มเลือกราคา */
+    .radio-group { display: flex; gap: 20px; align-items: center; margin-top: 10px; background: #f9f9f9; padding: 10px 15px; border-radius: 6px; border: 1px solid #eee; }
+    .radio-group label { margin-bottom: 0; cursor: pointer; font-weight: 500; font-size: 0.95rem; }
+
     .footer-actions { position: sticky; bottom: 20px; background: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; justify-content: flex-end; border: 1px solid #e8e8e8; z-index: 100; }
     .btn-save { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 6px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
     .btn-save:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3); }
@@ -203,15 +226,25 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <label>รหัสสินค้า / SKU (ระบบจะแก้ตามแบรนด์ให้อัตโนมัติ)</label>
                     <input type="text" name="product_sku" id="product_sku" value="<?php echo h($auto_generated_sku); ?>" required>
                 </div>
+                
                 <div class="form-group">
-                    <label>ราคา (บาท)</label>
-                    <input type="number" name="product_price" placeholder="0.00" step="0.01" min="0" required>
+                    <label>การแสดงราคาหน้าเว็บ</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="show_price" value="1" onchange="togglePriceInput(true)" checked> แสดงราคา</label>
+                        <label><input type="radio" name="show_price" value="0" onchange="togglePriceInput(false)"> ไม่แสดงราคา (สอบถามราคา)</label>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>ชื่อสินค้า</label>
-                <input type="text" name="product_name" placeholder="ระบุชื่อสินค้า..." required>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>ชื่อสินค้า</label>
+                    <input type="text" name="product_name" placeholder="ระบุชื่อสินค้า..." required>
+                </div>
+                <div class="form-group">
+                    <label>ราคา (บาท)</label>
+                    <input type="number" name="product_price" id="product_price" placeholder="0.00" step="0.01" min="0" required>
+                </div>
             </div>
             
             <div class="form-group">
@@ -277,37 +310,46 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   </main>
 
   <script>
+    // สคริปต์สำหรับจัดการเปิด/ปิดช่องกรอกราคา
+    function togglePriceInput(isShowingPrice) {
+        const priceInput = document.getElementById('product_price');
+        if (isShowingPrice) {
+            priceInput.disabled = false;
+            priceInput.required = true;
+            // ถ้าค่าเดิมเป็น 0 ให้เคลียร์ทิ้งเพื่อให้กรอกง่ายขึ้น
+            if (priceInput.value == '0') priceInput.value = '';
+        } else {
+            priceInput.disabled = true;
+            priceInput.required = false;
+            priceInput.value = '0';
+        }
+    }
+
+    // สคริปต์เปลี่ยน SKU อัตโนมัติตามแบรนด์
     document.addEventListener('DOMContentLoaded', function() {
         const skuInput = document.getElementById('product_sku');
         const brandCheckboxes = document.querySelectorAll('.brand-checkbox');
         
-        // ดึง 6 ตัวเลขสุ่มด้านหลังมาเก็บไว้ เพื่อให้เวลาติ๊กแล้วตัวเลขยังคงเดิม
         let initialSku = skuInput.value;
         let randomSuffix = initialSku.includes('-') ? initialSku.split('-')[1] : initialSku;
 
         function updateSku() {
-            // หาแบรนด์ที่ถูกติ๊กอันแรก
             const checkedBrand = document.querySelector('.brand-checkbox:checked');
-            let prefix = 'PRD'; // ค่าเริ่มต้นถ้าไม่ได้ติ๊กอะไรเลย
+            let prefix = 'PRD'; 
             
             if (checkedBrand) {
                 let brandName = checkedBrand.value;
-                // ตัดเครื่องหมายและเว้นวรรคออกให้เหลือแต่ตัวอักษรและตัวเลข (เช่น TP-LINK -> TPLINK)
                 let cleanBrand = brandName.replace(/[^A-Za-z0-9]/g, '');
                 
-                // ดึง 3 ตัวแรกมาทำเป็นอักษรพิมพ์ใหญ่
                 if (cleanBrand.length >= 3) {
                     prefix = cleanBrand.substring(0, 3).toUpperCase();
                 } else if (cleanBrand.length > 0) {
                     prefix = cleanBrand.toUpperCase();
                 }
             }
-            
-            // นำ Prefix ใหม่มาต่อกับตัวเลขสุ่มเดิม
             skuInput.value = prefix + '-' + randomSuffix;
         }
 
-        // สั่งให้จับการเปลี่ยนแปลงทุกครั้งที่มีการกด Checkbox
         brandCheckboxes.forEach(cb => {
             cb.addEventListener('change', updateSku);
         });

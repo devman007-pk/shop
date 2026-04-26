@@ -1,11 +1,19 @@
 <?php
-// admin-login.php - หน้าล็อกอินแอดมิน (เปลี่ยนอิโมจิเป็น SVG)
+// admin-login.php - สำหรับแอดมินเท่านั้น (แยกสิทธิ์ขาดจากลูกค้า)
 session_start();
 require_once __DIR__ . '/config.php';
 
-if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'admin') {
-    header("Location: admin-panel.php");
-    exit;
+// --- ระบบป้องกันการเข้าผิดหน้า ---
+if (isset($_SESSION['user_id'])) {
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'customer') {
+        // ถ้าลูกค้าเผลอเข้ามาหน้านี้ ให้เด้งไปหน้าแรกปกติ
+        header("Location: index.php");
+        exit;
+    } else if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
+        // ถ้าแอดมินล็อกอินอยู่แล้ว ให้ไปหน้า Dashboard
+        header("Location: admin-panel.php");
+        exit;
+    }
 }
 
 $error = '';
@@ -14,15 +22,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
 
     $pdo = getPDO();
+    // ค้นหาเฉพาะในตาราง admins เท่านั้น ลูกค้ามาล็อกอินตรงนี้ไม่ได้
     $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ?");
     $stmt->execute([$username]);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($admin) {
         if (password_verify($password, $admin['password']) || $password === $admin['password']) {
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $admin['id'];
             $_SESSION['user_name'] = $admin['username']; 
-            $_SESSION['user_role'] = 'admin';
+            $_SESSION['user_role'] = 'admin'; // <-- ระบุชัดเจนว่าเป็นแอดมิน
             header("Location: admin-panel.php");
             exit;
         } else {

@@ -7,8 +7,22 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $cartCount = isset($_SESSION['cart_count']) ? (int)$_SESSION['cart_count'] : 0;
 $wishCount = isset($_SESSION['wish_count']) ? (int)$_SESSION['wish_count'] : 0;
-$username = isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name'], ENT_QUOTES, 'UTF-8') : 'Guest';
-$accountLink = isset($_SESSION['user_name']) ? 'dashboard.php' : 'login.php';
+
+// --- โค้ดที่แก้ไขใหม่: ให้รับรู้เฉพาะลูกค้าเท่านั้น ---
+$isLoggedIn = isset($_SESSION['user_id']);
+$userRole = $_SESSION['user_role'] ?? '';
+$rawUsername = isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name'], ENT_QUOTES, 'UTF-8') : 'Guest';
+
+// เช็คว่าเป็นลูกค้า (customer) เท่านั้นถึงจะโชว์ชื่อ
+if ($isLoggedIn && $userRole === 'customer') {
+    $accountLink = 'dashboard.php';
+    $displayName = "สวัสดี, " . $rawUsername;
+} else {
+    // ถ้ายังไม่ล็อกอิน หรือ "เป็นแอดมินแอบเข้ามาดูหน้าร้าน" ให้โชว์เป็น Guest
+    $accountLink = 'login.php';
+    $displayName = "Guest";
+}
+// ------------------------------------------
 
 function nav_active(string $file): bool {
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -27,12 +41,10 @@ function nav_class(string $file, string $extra = ''): string {
     return $classes ? ' class="' . $classes . '"' : '';
 }
 ?>
-<!-- Load font once here so every page including navbar.php uses the same font -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700;900&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
-<!-- Navbar-specific CSS (self-contained in this file) -->
 <style>
 /* Set site font loaded above as the global font (will apply to all pages that include this navbar) */
 :root {
@@ -269,12 +281,10 @@ html, body {
 <header class="site-header">
   <div class="top-bar">
     <div class="container top-inner">
-      <!-- Logo -->
       <a class="logo" href="index.php" aria-label="ไปยังหน้าแรก">
         <img src="logo/logo.jpg" alt="BrandName" class="logo-img" />
       </a>
 
-      <!-- Search (center) -->
       <form class="search-form" action="shop.php" method="get" role="search" aria-label="ค้นหา">
         <input id="searchInput" name="q" type="search" placeholder="ค้นหา..." aria-label="ค้นหา" />
         <button id="searchBtn" type="submit" aria-label="ค้นหา">
@@ -285,9 +295,7 @@ html, body {
         </button>
       </form>
 
-      <!-- Actions (right) -->
       <div class="actions-box boxed" role="region" aria-label="Header actions">
-        <!-- Cart -->
         <button class="action-item cart-btn" aria-label="ตะกร้าสินค้า" type="button" onclick="location.href='cart.php'">
           <span class="count-badge cart-count"><?php echo $cartCount; ?></span>
           <span class="icon" aria-hidden="true">
@@ -303,7 +311,6 @@ html, body {
           </span>
         </button>
 
-        <!-- Wishlist -->
         <button class="action-item wish-btn" aria-label="รายการโปรด" type="button" onclick="location.href='wishlist.php'">
           <span class="count-badge wish-count"><?php echo $wishCount; ?></span>
           <span class="icon" aria-hidden="true">
@@ -317,7 +324,6 @@ html, body {
           </span>
         </button>
 
-        <!-- Account -->
         <button class="action-item account-btn" aria-label="บัญชีผู้ใช้" type="button" onclick="location.href='<?php echo $accountLink; ?>'">
           <span class="icon" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -326,7 +332,7 @@ html, body {
             </svg>
           </span>
           <span class="meta">
-            <span class="small"><?php echo $username; ?></span>
+            <span class="small"><?php echo $displayName; ?></span>
             <span class="muted">My Account</span>
           </span>
         </button>
@@ -334,7 +340,6 @@ html, body {
     </div>
   </div>
 
-  <!-- Main navigation -->
   <nav class="nav-bar" id="main-nav" aria-label="Primary">
     <div class="container nav-inner">
       <ul class="nav-list" role="menubar">

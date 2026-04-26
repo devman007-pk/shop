@@ -1,5 +1,5 @@
 <?php
-// login.php - รองรับทั้ง Username และ Email พร้อมปุ่มดูรหัสผ่าน
+// login.php - สำหรับลูกค้า (ปลดล็อคให้แอดมินเห็นหน้านี้ได้)
 session_start();
 require_once __DIR__ . '/config.php';
 
@@ -17,9 +17,16 @@ $csrf_token = $_SESSION['csrf_token'];
 $errors = [];
 $success = null;
 
-if (isset($_SESSION['user_name'])) {
-    header('Location: index.php');
-    exit;
+// ==================================================
+// --- ระบบป้องกันการเข้าผิดหน้า (อัปเดตใหม่) ---
+// ==================================================
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
+    if ($_SESSION['user_role'] === 'customer') {
+        // ถ้า "ลูกค้า" ล็อกอินอยู่แล้ว ให้ไปหน้าแรก
+        header('Location: index.php');
+        exit;
+    }
+    // *** หมายเหตุ: ถ้าเป็น "admin" ระบบจะปล่อยผ่านให้ลงไปเห็นฟอร์มล็อกอินด้านล่างได้เลย ***
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -37,16 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($login_identity === '' || $password === '') {
                 $errors[] = 'กรุณากรอกข้อมูลให้ครบถ้วน';
             } else {
-                // ค้นหาจากทั้งช่อง username หรือ email
+                // ค้นหาเฉพาะในตาราง users (ลูกค้า) เท่านั้น
                 $stmt = $pdo->prepare("SELECT id, username, email, password_hash FROM users WHERE username = ? OR email = ? LIMIT 1");
                 $stmt->execute([$login_identity, $login_identity]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($user && password_verify($password, $user['password_hash'])) {
-                    // ล็อกอินสำเร็จ
+                    // ล็อกอินสำเร็จ (จะเขียนทับ Session เดิมของแอดมินทันที)
                     session_regenerate_id(true);
                     $_SESSION['user_name'] = $user['username'];
                     $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_role'] = 'customer'; 
                     
                     $success = 'เข้าสู่ระบบสำเร็จ! กำลังพาท่านไปยังหน้าหลัก...';
                     echo "<script>window.location.replace('index.php');</script>";
@@ -74,12 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .subtitle { text-align: center; color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; }
     label { display: block; margin-top: 16px; margin-bottom: 8px; font-weight: 700; color: var(--navy); }
     
-    /* กล่องสำหรับใส่ไอคอนรูปรหัสผ่าน */
     .input-wrapper { position: relative; display: block; }
     .input-wrapper input { width: 100%; padding: 14px; padding-right: 48px; border-radius: 10px; border: 1px solid rgba(11,47,74,0.15); box-sizing: border-box; background: #fcfcfd; font-family: inherit; font-size: 1rem; transition: all 0.3s ease; }
     .input-wrapper input:focus { outline: none; border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(30,144,255,0.1); }
     
-    /* สไตล์ไอคอนรูปตา */
     .toggle-password { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; justify-content: center; transition: color 0.2s; }
     .toggle-password:hover { color: var(--navy); }
     .toggle-password svg { width: 20px; height: 20px; }
@@ -94,15 +100,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </style>
 
   <script>
-    // สคริปต์สลับซ่อน/แสดงรหัสผ่าน
     function togglePassword(inputId, btn) {
         const input = document.getElementById(inputId);
         if (input.type === 'password') {
             input.type = 'text';
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>'; // ไอคอนตาขีดฆ่า
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
         } else {
             input.type = 'password';
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'; // ไอคอนตาปกติ
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
         }
     }
   </script>

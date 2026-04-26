@@ -1,8 +1,20 @@
 <?php
 // payment.php
 session_start();
-require_once __DIR__ . '/config.php';
 
+// 1. สั่งห้ามเบราว์เซอร์จำหน้าเว็บ (Anti-Cache) เพื่อแก้ปัญหากดย้อนกลับหลัง Logout
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// 2. ตรวจสอบการล็อกอิน (บังคับว่าต้องล็อกอินแล้ว และต้องเป็น "ลูกค้า" เท่านั้น)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'customer') {
+    header("Location: login.php");
+    exit;
+}
+
+require_once __DIR__ . '/config.php';
+// ... (โค้ดอื่นๆ ของหน้านั้นๆ ตามปกติ) ...
 if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {
     header("Location: index.php");
     exit;

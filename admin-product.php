@@ -1,11 +1,11 @@
 <?php
-// admin-product.php - หน้าจัดการการแสดงผลสินค้าหน้าแรก
+// admin-product.php - หน้าจัดการการแสดงผลสินค้าหน้าแรก (สินค้าใหม่ & สินค้าแนะนำ)
 session_start();
 require_once __DIR__ . '/config.php';
 
 // 1. ตรวจสอบสิทธิ์ (ต้อง Login และเป็น Admin)
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header("Location: admin-login.php");
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    header("Location: admin-login.php"); 
     exit;
 }
 
@@ -17,16 +17,27 @@ $error_msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     try {
         $pdo->beginTransaction();
-        $pdo->exec("UPDATE products SET is_new_product = 0, is_recommended = 0");
+        
+        // อัปเดตเฉพาะสินค้าที่กำลังแสดงอยู่บนหน้าจอ (แก้บัคค้นหาแล้วข้อมูลหาย)
+        if (!empty($_POST['displayed_products'])) {
+            $displayed = array_map('intval', $_POST['displayed_products']);
+            $placeholders = implode(',', array_fill(0, count($displayed), '?'));
+            
+            // รีเซ็ตค่าให้เป็น 0 ก่อนเฉพาะตัวที่แสดงบนหน้าจอ
+            $resetStmt = $pdo->prepare("UPDATE products SET is_new_product = 0, is_recommended = 0 WHERE id IN ($placeholders)");
+            $resetStmt->execute($displayed);
+            
+            // อัปเดต สินค้าใหม่
+            if (!empty($_POST['is_new'])) {
+                $stmtNew = $pdo->prepare("UPDATE products SET is_new_product = 1 WHERE id = ?");
+                foreach ($_POST['is_new'] as $id) { $stmtNew->execute([$id]); }
+            }
 
-        if (!empty($_POST['is_new'])) {
-            $stmtNew = $pdo->prepare("UPDATE products SET is_new_product = 1 WHERE id = ?");
-            foreach ($_POST['is_new'] as $id) { $stmtNew->execute([$id]); }
-        }
-
-        if (!empty($_POST['is_rec'])) {
-            $stmtRec = $pdo->prepare("UPDATE products SET is_recommended = 1 WHERE id = ?");
-            foreach ($_POST['is_rec'] as $id) { $stmtRec->execute([$id]); }
+            // อัปเดต สินค้าแนะนำ
+            if (!empty($_POST['is_rec'])) {
+                $stmtRec = $pdo->prepare("UPDATE products SET is_recommended = 1 WHERE id = ?");
+                foreach ($_POST['is_rec'] as $id) { $stmtRec->execute([$id]); }
+            }
         }
 
         $pdo->commit();
@@ -58,12 +69,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
   <title>ตั้งค่าการแสดงผลสินค้า - OTM Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-        --primary: #1890ff;
-        --primary-hover: #0958d9;
-        --navy: #0b2f4a;
-        --bg: #f0f2f5;
-    }
+    :root { --primary: #1890ff; --primary-hover: #0958d9; --navy: #0b2f4a; --bg: #f0f2f5; }
     body { font-family: 'Noto Sans Thai', sans-serif; background-color: var(--bg); margin: 0; padding-bottom: 50px; }
     
     .container { max-width: 1000px; margin: 30px auto; padding: 0 15px; }
@@ -72,7 +78,6 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
     .card-title { font-size: 1.4rem; font-weight: 700; color: var(--navy); margin: 0; display: flex; align-items: center; gap: 10px; }
 
-    /* ปุ่มย้อนกลับย้ายมาอยู่ใน Card */
     .btn-back { background: #f0f2f5; color: #333; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 5px; border: 1px solid #d9d9d9; transition: all 0.2s; }
     .btn-back:hover { background: #e6e8eb; border-color: #ccc; }
 
@@ -82,9 +87,9 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     .btn-search:hover { opacity: 0.9; }
 
     .product-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    .product-table th { background: #fafafa; padding: 12px; text-align: left; border-bottom: 2px solid #f0f0f0; font-weight: 700; color: #333; }
-    .product-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
-    .product-table tr:hover { background-color: #fcfcfc; }
+    .product-table th { background: #fafafa; padding: 12px; text-align: left; border-bottom: 2px solid #f0f0f0; font-weight: 700; color: #333; font-size: 0.95rem; }
+    .product-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .product-table tr:hover { background-color: #fdfdfd; }
     .th-icon { display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
 
     .checkbox-container { display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; }
@@ -148,13 +153,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>ชื่อสินค้า</th>
                         <th style="text-align: center; width: 140px;">
                             <span class="th-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                 สินค้าใหม่
                             </span>
                         </th>
                         <th style="text-align: center; width: 140px;">
                             <span class="th-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 5h5l-4 4 1 5-5-3-5 3 1-5-4-4h5z"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 5h5l-4 4 1 5-5-3-5 3 1-5-4-4h5z"></path></svg>
                                 สินค้าแนะนำ
                             </span>
                         </th>
@@ -166,13 +171,17 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <?php else: ?>
                         <?php foreach($products as $p): ?>
                         <tr>
+                            <input type="hidden" name="displayed_products[]" value="<?php echo $p['id']; ?>">
+                            
                             <td style="color: #666;">#<?php echo h($p['id']); ?></td>
                             <td style="font-weight: 500; color: var(--navy);"><?php echo h($p['name']); ?></td>
+                            
                             <td style="text-align: center;">
                                 <label class="checkbox-container">
                                     <input type="checkbox" name="is_new[]" value="<?php echo $p['id']; ?>" <?php echo $p['is_new_product'] ? 'checked' : ''; ?>>
                                 </label>
                             </td>
+                            
                             <td style="text-align: center;">
                                 <label class="checkbox-container">
                                     <input type="checkbox" name="is_rec[]" value="<?php echo $p['id']; ?>" <?php echo $p['is_recommended'] ? 'checked' : ''; ?>>

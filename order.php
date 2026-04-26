@@ -1,10 +1,21 @@
 <?php
 // order.php - หน้าแสดงประวัติการสั่งซื้อของฉัน
 session_start();
+
+// ==========================================
+// 1. สั่งห้ามเบราว์เซอร์จำหน้าเว็บ (Anti-Cache)
+// ป้องกันการกดย้อนกลับมาดูข้อมูลหลังจาก Logout ไปแล้ว
+// ==========================================
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 require_once __DIR__ . '/config.php';
 
-// ตรวจสอบการล็อกอิน
-if (!isset($_SESSION['user_id'])) {
+// ==========================================
+// 2. ตรวจสอบการล็อกอิน (บังคับว่าต้องเป็น "ลูกค้า" เท่านั้น)
+// ==========================================
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'customer') {
     header("Location: login.php");
     exit;
 }
@@ -85,6 +96,46 @@ function getOrderStatus($status) {
     .btn-shopping { display: inline-block; background: #1677ff; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700; transition: background 0.2s; }
     .btn-shopping:hover { background: #0958d9; }
 
+    /* ส่วนแสดงเลขพัสดุ */
+    .shipping-info-box {
+        flex-basis: 100%;
+        background: #f8fafc;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px dashed #cbd5e1;
+        margin-top: 5px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .shipping-info-title {
+        color: #0b2f4a;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .shipping-details {
+        font-size: 0.95rem;
+        color: #444;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .tracking-number-badge {
+        background: #fff;
+        padding: 4px 10px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        font-family: monospace;
+        font-weight: 800;
+        color: #1677ff;
+        font-size: 1.05rem;
+        letter-spacing: 0.5px;
+    }
+
     @media (max-width: 768px) {
         .order-card { flex-direction: column; align-items: flex-start; }
         .order-info { width: 100%; }
@@ -137,6 +188,26 @@ function getOrderStatus($status) {
             <div>
                 <a href="payment.php?id=<?php echo $o['id']; ?>" class="btn-view">ดูรายละเอียดบิล</a>
             </div>
+
+            <?php if (!empty($o['shipping_company']) || !empty($o['tracking_number'])): ?>
+            <div class="shipping-info-box">
+                <div class="shipping-info-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                    ข้อมูลการจัดส่ง:
+                </div>
+                <div class="shipping-details">
+                    <span><b>ขนส่ง:</b> <span style="color:#1677ff; font-weight: 700;"><?php echo h($o['shipping_company'] ?: 'ไม่ระบุ'); ?></span></span>
+                    <span style="color: #cbd5e1;">|</span>
+                    <span>
+                        <b>เลขพัสดุ:</b> 
+                        <span class="tracking-number-badge">
+                            <?php echo h($o['tracking_number'] ?: '-'); ?>
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <?php endif; ?>
+
         </div>
         <?php endforeach; ?>
     <?php endif; ?>
