@@ -202,27 +202,59 @@ $phone_link = preg_replace('/[^0-9]/', '', $contact['phone'] ?? '');
 
     <div class="contact-divider" aria-hidden="true"></div>
 
-    <section class="contact-features" aria-label="บริการของเรา">
-      <div class="feature">
-        <h3>Fiber Optic</h3>
-        <p>บริการด้านสื่อสาร สายไฟเบอร์ออพติค</p>
-      </div>
+ <section class="contact-services-section" style="margin-top: 50px; padding-top: 40px; border-top: 1px solid #eee;">
+      <h2 style="margin:0 0 30px; font-size:1.25rem; font-weight:800; color:var(--navy); text-align: left;">บริการของเรา</h2>
 
-      <div class="feature">
-        <h3>CCTV</h3>
-        <p>ระบบกล้องวงจรปิด ออกแบบและติดตั้ง</p>
-      </div>
+      <div class="services-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 35px 40px;">
+        
+        <div class="service-box" style="display: flex; gap: 18px; align-items: flex-start;">
+          <div style="color: #1e90ff; flex-shrink: 0; padding-top: 4px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0 0 8px; font-size: 1.1rem; font-weight: 700; color: var(--navy); line-height: 1.4;">ระบบโครงข่ายไฟเบอร์ออพติค (Fiber Optic)</h3>
+            <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">ออกแบบ ติดตั้ง และเชื่อมต่อสายใยแก้วนำแสงครบวงจร พร้อมทดสอบมาตรฐาน OTDR</p>
+          </div>
+        </div>
 
-      <div class="feature">
-        <h3>ระบบเครือข่าย</h3>
-        <p>ระบบเครือข่าย LAN, VLAN และออกแบบโครงสร้าง</p>
-      </div>
+        <div class="service-box" style="display: flex; gap: 18px; align-items: flex-start;">
+          <div style="color: #2bb673; flex-shrink: 0; padding-top: 4px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0 0 8px; font-size: 1.1rem; font-weight: 700; color: var(--navy); line-height: 1.4;">ระบบความปลอดภัยอัจฉริยะ (Smart Security & CCTV)</h3>
+            <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">ติดตั้งกล้องวงจรปิดคุณภาพสูง และระบบศูนย์ควบคุมรวมศูนย์ (CCOC) พร้อม AI วิเคราะห์ข้อมูล</p>
+          </div>
+        </div>
 
-      <div class="feature">
-        <h3>WIFI Hotspot</h3>
-        <p>ระบบไวไฟ สำหรับโรงแรม รีสอร์ต และหน่วยงาน</p>
+        <div class="service-box" style="display: flex; gap: 18px; align-items: flex-start;">
+          <div style="color: #1e90ff; flex-shrink: 0; padding-top: 4px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0 0 8px; font-size: 1.1rem; font-weight: 700; color: var(--navy); line-height: 1.4;">วางระบบเครือข่ายและไอที (Network & IT Solutions)</h3>
+            <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">จัดการระบบ LAN/Wi-Fi, Server และการเชื่อมต่อโครงข่ายคอมพิวเตอร์สำหรับองค์กร</p>
+          </div>
+        </div>
+
+        <div class="service-box" style="display: flex; gap: 18px; align-items: flex-start;">
+          <div style="color: #2bb673; flex-shrink: 0; padding-top: 4px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0 0 8px; font-size: 1.1rem; font-weight: 700; color: var(--navy); line-height: 1.4;">บริการดูแลและบำรุงรักษา (Maintenance Service)</h3>
+            <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">ดูแลระบบหลังการขาย (MA) และทีมสนับสนุนทางเทคนิคที่รวดเร็ว (On-Site Service)</p>
+          </div>
+        </div>
+
       </div>
     </section>
+
+    <style>
+      @media (max-width: 768px) {
+        .services-grid { grid-template-columns: 1fr !important; gap: 25px !important; }
+      }
+    </style>
   </main>
 
   <?php if (file_exists(__DIR__ . '/footer.php')) include __DIR__ . '/footer.php'; ?>

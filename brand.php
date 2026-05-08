@@ -37,6 +37,7 @@ $productsActiveCond = $productsHasActive ? "AND p.active = 1" : "";
 $brandWhereSql = !empty($brandWhere) ? 'WHERE ' . implode(' AND ', $brandWhere) : '';
 
 // แก้ไข SQL ให้นับจำนวนสินค้าจากตาราง product_tags แทน
+// แก้ไข SQL ให้นับจำนวนสินค้าจากตาราง product_tags แทน
 $sql = "
   SELECT
     b.id,
@@ -52,7 +53,7 @@ $sql = "
     ) AS cnt
   FROM brands b
   {$brandWhereSql}
-  ORDER BY b.name ASC
+  ORDER BY LOWER(TRIM(b.name)) ASC
 ";
 
 try {

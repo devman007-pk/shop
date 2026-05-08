@@ -1,4 +1,4 @@
-// script.js - Fixed Realtime Sync, Cart Animations & Pagination
+// script.js - Fixed Realtime Sync, Cart Animations, Pagination & Clickable Cards
 (function () {
   'use strict';
 
@@ -186,13 +186,13 @@
   }
 
   // --- 6. โหลดสินค้าด้วย AJAX พร้อมระบบแบ่งหน้า (Pagination) ---
-  let perPage = 15; // ⚡ ตั้งค่า 1 หน้า = 15 ชิ้น
-  let currentFilters = {}; // เก็บค่าตัวกรองปัจจุบัน
+  let perPage = 15; 
+  let currentFilters = {}; 
 
   function formatPrice(n) { try { return new Intl.NumberFormat('th-TH').format(Number(n)); } catch (e) { return String(n); } }
 
   async function loadProducts(opts = {}) {
-    currentFilters = { ...opts }; // จำค่าไว้เผื่อกดเปลี่ยนหน้า
+    currentFilters = { ...opts }; 
     const grid = document.getElementById('productGrid'), totalCountEl = document.getElementById('totalCount');
     if (!grid || typeof window.SHOP_API === 'undefined') return;
     
@@ -214,6 +214,15 @@
         card.className = 'product-card';
         card.dataset.productId = item.id;
         
+        // 🟢 ทำให้กล่องคลิกได้ แล้วส่งไปที่หน้ารายละเอียดสินค้า
+        card.style.cursor = 'pointer';
+        card.onclick = (e) => {
+            // ดักไว้ไม่ให้ทำงานตอนเราตั้งใจจะกดปุ่ม (เช่น ปุ่มตะกร้า หรือ หัวใจ)
+            if (!e.target.closest('button')) {
+                window.location.href = 'product-detail.php?id=' + item.id;
+            }
+        };
+
         const priceDisplay = (item.price === null) ? 'สอบถามราคา' : `฿${formatPrice(item.price)}`;
 
         card.innerHTML = `
@@ -243,9 +252,7 @@
       
       if (totalCountEl) totalCountEl.textContent = data.total;
 
-      // ---------------------------------------------
-      // ⚡ สร้างปุ่มแบ่งหน้า (Pagination) ต่อท้ายสินค้า
-      // ---------------------------------------------
+      // สร้างปุ่มแบ่งหน้า (Pagination)
       let paginationWrap = document.getElementById('paginationWrap');
       if (!paginationWrap) {
           paginationWrap = document.createElement('div');
@@ -284,7 +291,6 @@
           });
       }
 
-      // ซ่อนปุ่มถ้าไม่มีสินค้าเลย
       paginationWrap.style.display = data.total > 0 ? 'flex' : 'none';
 
     } catch (err) {}

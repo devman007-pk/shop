@@ -40,6 +40,20 @@ function nav_class(string $file, string $extra = ''): string {
     $classes = trim($extra . $active);
     return $classes ? ' class="' . $classes . '"' : '';
 }
+
+// =========================================
+//  ดึงข้อมูล Tags (หมวดหมู่ และ แบรนด์) สำหรับ Search Dropdown
+// =========================================
+$navTags = ['category' => [], 'brand' => []];
+if (function_exists('getPDO')) {
+    try {
+        $pdoTemp = getPDO();
+        $stmtTags = $pdoTemp->query("SELECT tag_group, tag_value FROM product_tags WHERE tag_group IN ('category', 'brand') GROUP BY tag_group, tag_value ORDER BY tag_value ASC");
+        while ($row = $stmtTags->fetch(PDO::FETCH_ASSOC)) {
+            $navTags[$row['tag_group']][] = $row['tag_value'];
+        }
+    } catch (Exception $e) {}
+}
 ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -275,7 +289,71 @@ html, body {
   z-index: 10 !important;
 }
 
-
+/* =========================================
+   สไตล์สำหรับ Dropdown ของช่องค้นหา
+   ========================================= */
+.search-tags-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    min-width: 320px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    padding: 20px;
+    z-index: 9999;
+    display: none; /* ซ่อนไว้ก่อน */
+    max-height: 400px;
+    overflow-y: auto;
+    text-align: left;
+}
+.search-tags-dropdown.active {
+    display: block;
+    animation: fadeInDown 0.2s ease-out;
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.tags-section { margin-bottom: 20px; }
+.tags-section:last-child { margin-bottom: 0; }
+.tags-section-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0b2f4a;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #eee;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tags-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.tag-label { cursor: pointer; user-select: none; margin: 0; }
+.tag-label input[type="checkbox"] { display: none; }
+.tag-btn {
+    display: inline-flex;
+    padding: 6px 14px;
+    background: #f0f2f5;
+    color: #555;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+.tag-label input[type="checkbox"]:checked + .tag-btn {
+    background: #e6f4ff;
+    color: #1677ff;
+    border-color: #91caff;
+    font-weight: 700;
+    transform: scale(1.05);
+}
 </style>
 
 <header class="site-header">
@@ -285,8 +363,8 @@ html, body {
         <img src="logo/logo.jpg" alt="BrandName" class="logo-img" />
       </a>
 
-      <form class="search-form" action="shop.php" method="get" role="search" aria-label="ค้นหา">
-        <input id="searchInput" name="q" type="search" placeholder="ค้นหา..." aria-label="ค้นหา" />
+      <form class="search-form" action="shop.php" method="get" role="search" aria-label="ค้นหา" style="position:relative;">
+        <input id="searchInput" name="q" type="search" placeholder="ค้นหา..." aria-label="ค้นหา" autocomplete="off" />
         <button id="searchBtn" type="submit" aria-label="ค้นหา">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M21 21l-4.35-4.35" stroke="#0b2f4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -353,3 +431,75 @@ html, body {
     </div>
   </nav>
 </header>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.querySelector('.search-form');
+    if (!searchInput || !searchForm) return;
+
+    // นำข้อมูล Tags จาก PHP มาใช้ใน JS
+    const tagData = <?php echo json_encode($navTags); ?>;
+    
+    // สร้างกล่อง Dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'search-tags-dropdown';
+    
+    let html = '';
+    
+    // วนลูปสร้างปุ่ม: ประเภทสินค้า
+    if (tagData.category && tagData.category.length > 0) {
+        html += `<div class="tags-section">
+                    <div class="tags-section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1677ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        เลือกหมวดหมู่สินค้า
+                    </div>
+                    <div class="tags-wrapper">`;
+        tagData.category.forEach(cat => {
+            html += `<label class="tag-label">
+                        <input type="checkbox" name="category[]" value="${cat}">
+                        <span class="tag-btn">${cat}</span>
+                     </label>`;
+        });
+        html += `</div></div>`;
+    }
+    
+    // วนลูปสร้างปุ่ม: แบรนด์
+    if (tagData.brand && tagData.brand.length > 0) {
+        html += `<div class="tags-section">
+                    <div class="tags-section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#389e0d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                        เลือกแบรนด์
+                    </div>
+                    <div class="tags-wrapper">`;
+        tagData.brand.forEach(brand => {
+            html += `<label class="tag-label">
+                        <input type="checkbox" name="brand[]" value="${brand}">
+                        <span class="tag-btn">${brand}</span>
+                     </label>`;
+        });
+        html += `</div></div>`;
+    }
+    
+    if (html === '') {
+        html = '<div style="color:#999; font-size:0.85rem; text-align:center;">ยังไม่มีแท็กข้อมูลในระบบ</div>';
+    }
+    
+    dropdown.innerHTML = html;
+    
+    // นำ Dropdown ไปซ่อนไว้ในฟอร์ม
+    searchForm.appendChild(dropdown);
+
+    // เปิด Dropdown เมื่อคลิกที่ช่องค้นหา
+    searchInput.addEventListener('focus', () => {
+        dropdown.classList.add('active');
+    });
+
+    // ปิด Dropdown เมื่อคลิกที่พื้นที่อื่นนอกจากฟอร์มค้นหา
+    document.addEventListener('click', (e) => {
+        if (!searchForm.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+});
+</script>

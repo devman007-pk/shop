@@ -1,5 +1,5 @@
 <?php
-// admin-tag.php - หน้าสำหรับเพิ่ม TAG สินค้า
+// admin-tag.php - หน้าสำหรับเพิ่ม TAG สินค้า (เพิ่มระบบป้องกันข้อมูลซ้ำ)
 session_start();
 require_once __DIR__ . '/config.php';
 
@@ -18,12 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_value'])) {
     $tag_group = $_POST['tag_group'];
 
     if ($tag_value !== '') {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO product_tags (product_id, tag_group, tag_value) VALUES (0, ?, ?)");
-            $stmt->execute([$tag_group, $tag_value]);
-            $success_msg = "เพิ่ม TAG '{$tag_value}' เรียบร้อยแล้ว!";
-        } catch (Exception $e) {
-            $error_msg = "เกิดข้อผิดพลาด: " . $e->getMessage();
+        // 🛠️ เช็คก่อนว่ามี TAG ชื่อนี้ในกลุ่มที่เลือกอยู่แล้วหรือไม่
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM product_tags WHERE tag_group = ? AND tag_value = ?");
+        $stmtCheck->execute([$tag_group, $tag_value]);
+        
+        if ($stmtCheck->fetchColumn() > 0) {
+            $error_msg = "มีชื่อ TAG '{$tag_value}' ในระบบอยู่แล้วครับ";
+        } else {
+            // ถ้ายังไม่มี ค่อยบันทึกข้อมูล
+            try {
+                $stmt = $pdo->prepare("INSERT INTO product_tags (product_id, tag_group, tag_value) VALUES (0, ?, ?)");
+                $stmt->execute([$tag_group, $tag_value]);
+                $success_msg = "เพิ่ม TAG '{$tag_value}' เรียบร้อยแล้ว!";
+            } catch (Exception $e) {
+                $error_msg = "เกิดข้อผิดพลาด: " . $e->getMessage();
+            }
         }
     } else {
         $error_msg = "กรุณากรอกชื่อ TAG";
@@ -47,6 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_value'])) {
     input[type="text"]:focus, select:focus { outline: none; border-color: var(--primary); }
     .btn-submit { background: var(--primary); color: #fff; border: none; padding: 14px 20px; border-radius: 6px; font-weight: 700; font-size: 1.05rem; width: 100%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-submit:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3); }
+    
+    /* ปุ่มจัดการ */
+    .btn-manage { background: #e6f4ff; color: #1677ff; border: 1px solid #91caff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+    .btn-manage:hover { background: #bae0ff; }
+
     .alert { padding: 12px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .alert-success { background: #f6fff6; color: #127a3b; border: 1px solid #b7eb8f; }
     .alert-error { background: #fff1f0; color: #ff4d4f; border: 1px solid #ffccc7; }
@@ -57,10 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_value'])) {
   
   <div class="container">
     <div class="card">
-        <h2 style="margin-top:0; color:#0b2f4a; display:flex; align-items:center; gap:10px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-            เพิ่ม TAG ข้อมูลสินค้า
-        </h2>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+            <h2 style="margin:0; color:#0b2f4a; display:flex; align-items:center; gap:10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                เพิ่ม TAG ข้อมูลสินค้า
+            </h2>
+            <a href="admin-edit-tag.php" class="btn-manage">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"></polygon><line x1="3" y1="22" x2="21" y2="22"></line></svg>
+                จัดการแก้ไข/ลบ
+            </a>
+        </div>
         
         <?php if($success_msg): ?>
             <div class="alert alert-success">
@@ -82,7 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_value'])) {
                 <select name="tag_group" required>
                     <option value="category">ประเภทสินค้า (เช่น เราเตอร์, กล้องวงจรปิด)</option>
                     <option value="brand">แบรนด์สินค้า (เช่น TP-Link, Hikvision)</option>
-                    <option value="general">แท็กสินค้า (เช่น WI-Fi, กล้องวงจรปิด)</option>
                 </select>
             </div>
 

@@ -28,7 +28,7 @@ if (file_exists(__DIR__ . '/config.php')) {
             ");
             if ($stmt) $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // เช็คก่อนว่ามีช่อง show_price ในฐานข้อมูลไหม (กันเว็บพัง Error 500)
+            // เช็คก่อนว่ามีช่อง show_price ในฐานข้อมูลไหม
             $hasShowPrice = false;
             try {
                 $cols = $pdo->query("SHOW COLUMNS FROM products LIKE 'show_price'")->fetchAll();
@@ -115,6 +115,44 @@ function formatPrice($p) {
     .shop-by-brands .brand-thumb img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
     .shop-by-brands .brand-name { font-weight: 700; font-size: 0.95rem; color: #222; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .shop-by-brands .brand-count { font-size: 0.8rem; color: #888; margin-top: 3px; }
+
+    /* =========================================
+       อัปเดตสไตล์ใหม่ทั้งหมดตามที่ต้องการ
+       ========================================= */
+
+    /* 1. ลิงก์ล่องหน คลุมทั้งกล่องเพื่อรับคลิกไปหน้ารายละเอียด */
+    .card-link-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 10;
+    }
+
+    /* 2. ปุ่มหัวใจและตะกร้า ต้องมี z-index สูงกว่าลิงก์ล่องหน จะได้กดติด */
+    .product-card .fav-btn,
+    .product-card .add-cart {
+        position: relative;
+        z-index: 20 !important;
+    }
+
+    /* 3. 🔴 หัวใจ - กดแล้วต้องแดงเต็มดวงทะลุทะลวง! */
+    .product-card .fav-btn.active svg path {
+        stroke: #ff4d4f !important;
+        fill: #ff4d4f !important; /* ถมสีแดงข้างใน */
+    }
+    .product-card .fav-btn.active {
+        border-color: #ff4d4f !important;
+    }
+
+    /* 4. 🛒 ปุ่มตะกร้า - ไล่สี ฟ้า-เขียว เหมือนกันเป๊ะ */
+    .product-card .add-cart {
+        background: linear-gradient(90deg, #1e90ff, #2bb673) !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    .product-card .add-cart:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(43, 182, 115, 0.3) !important;
+    }
   </style>
 </head>
 <body>
@@ -180,7 +218,11 @@ function formatPrice($p) {
             <?php else: ?>
                 <?php foreach ($products as $p): ?>
                   <div class="carousel-item" role="listitem">
-                    <article class="product-card" data-product-id="<?php echo h($p['id']); ?>">
+                    
+                    <article class="product-card" data-product-id="<?php echo h($p['id']); ?>" style="position: relative;">
+                      
+                      <a href="product-detail.php?id=<?php echo h($p['id']); ?>" class="card-link-overlay"></a>
+
                       <div class="product-thumb <?php echo empty($p['image_url']) ? 'empty-thumb' : ''; ?>">
                         <?php if (!empty($p['image_url'])): ?>
                           <img src="<?php echo h($p['image_url']); ?>" alt="<?php echo h($p['name']); ?>">
@@ -188,7 +230,7 @@ function formatPrice($p) {
                           <span class="thumb-label">รูปสินค้า</span>
                         <?php endif; ?>
 
-                        <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="<?php echo h($p['id']); ?>">
+                        <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="<?php echo h($p['id']); ?>" style="position: absolute;">
                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12.1 21s-7.6-4.8-9.5-7.1C-0.6 11.5 2.2 6.6 6.6 6.6c2.3 0 3.9 1.5 4.9 2.6 1-1.1 2.6-2.6 4.9-2.6 4.4 0 7.2 4.9 3.9 7.3-1.9 2.3-9.5 7.1-9.5 7.1z" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
@@ -198,7 +240,7 @@ function formatPrice($p) {
                       <h3 class="prod-title"><?php echo h($p['name']); ?></h3>
                       <?php $fmt = formatPrice(isset($p['price']) ? $p['price'] : null); ?>
                       
-                      <div class="product-price" style="color: #9B0F06; font-weight: 800; font-size: 1.1rem; margin-top: 8px;">
+                      <div class="product-price" style="color: #9B0F06 !important; font-weight: 800; font-size: 1.1rem; margin-top: 8px;">
                         <?php if (isset($p['show_price']) && $p['show_price'] == 0): ?>
                           <span>สอบถามราคา</span>
                         <?php elseif ($fmt !== null): ?>
@@ -239,7 +281,11 @@ function formatPrice($p) {
             <?php else: ?>
                 <?php foreach ($recommendedProducts as $rp): ?>
                   <div class="carousel-item" role="listitem">
-                    <article class="product-card" data-product-id="<?php echo h($rp['id']); ?>">
+                    
+                    <article class="product-card" data-product-id="<?php echo h($rp['id']); ?>" style="position: relative;">
+                      
+                      <a href="product-detail.php?id=<?php echo h($rp['id']); ?>" class="card-link-overlay"></a>
+
                       <div class="product-thumb <?php echo empty($rp['image_url']) ? 'empty-thumb' : ''; ?>">
                         <?php if (!empty($rp['image_url'])): ?>
                           <img src="<?php echo h($rp['image_url']); ?>" alt="<?php echo h($rp['name']); ?>">
@@ -247,7 +293,7 @@ function formatPrice($p) {
                           <span class="thumb-label">รูปสินค้า</span>
                         <?php endif; ?>
 
-                        <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="<?php echo h($rp['id']); ?>">
+                        <button class="fav-btn" type="button" aria-label="เพิ่มรายการโปรด" data-pid="<?php echo h($rp['id']); ?>" style="position: absolute;">
                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12.1 21s-7.6-4.8-9.5-7.1C-0.6 11.5 2.2 6.6 6.6 6.6c2.3 0 3.9 1.5 4.9 2.6 1-1.1 2.6-2.6 4.9-2.6 4.4 0 7.2 4.9 3.9 7.3-1.9 2.3-9.5 7.1-9.5 7.1z" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
@@ -257,7 +303,7 @@ function formatPrice($p) {
                       <h3 class="prod-title"><?php echo h($rp['name']); ?></h3>
                       <?php $fmtRec = formatPrice(isset($rp['price']) ? $rp['price'] : null); ?>
                       
-                      <div class="product-price" style="color: #9B0F06; font-weight: 800; font-size: 1.1rem; margin-top: 8px;">
+                      <div class="product-price" style="color: #9B0F06 !important; font-weight: 800; font-size: 1.1rem; margin-top: 8px;">
                         <?php if (isset($rp['show_price']) && $rp['show_price'] == 0): ?>
                           <span>สอบถามราคา</span>
                         <?php elseif ($fmtRec !== null): ?>

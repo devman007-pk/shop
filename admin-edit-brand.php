@@ -17,15 +17,15 @@ if (isset($_GET['delete'])) {
     try {
         $id = (int)$_GET['delete'];
         
-        $stmtImg = $pdo->prepare("SELECT image_url FROM brands WHERE id = ?");
+        $stmtImg = $pdo->prepare("SELECT logo_url FROM brands WHERE id = ?");
         $stmtImg->execute([$id]);
         $brand = $stmtImg->fetch(PDO::FETCH_ASSOC);
         
         $stmt = $pdo->prepare("DELETE FROM brands WHERE id = ?");
         $stmt->execute([$id]);
 
-        if ($brand && !empty($brand['image_url']) && file_exists($brand['image_url'])) {
-            unlink($brand['image_url']);
+        if ($brand && !empty($brand['logo_url']) && file_exists($brand['logo_url'])) {
+            unlink($brand['logo_url']);
         }
 
         $success_msg = "ลบแบรนด์เรียบร้อยแล้ว!";
@@ -50,16 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_brand'])) {
             
             if (move_uploaded_file($_FILES['brand_image']['tmp_name'], $new_filename)) {
                 // ดึงรูปเก่ามาลบทิ้ง
-                $stmtOld = $pdo->prepare("SELECT image_url FROM brands WHERE id = ?");
+                $stmtOld = $pdo->prepare("SELECT logo_url FROM brands WHERE id = ?");
                 $stmtOld->execute([$id]);
                 $oldBrand = $stmtOld->fetch(PDO::FETCH_ASSOC);
                 
-                if ($oldBrand && !empty($oldBrand['image_url']) && file_exists($oldBrand['image_url'])) {
-                    unlink($oldBrand['image_url']);
+                if ($oldBrand && !empty($oldBrand['logo_url']) && file_exists($oldBrand['logo_url'])) {
+                    unlink($oldBrand['logo_url']);
                 }
                 
                 // อัปเดตทั้งชื่อและรูป
-                $stmt = $pdo->prepare("UPDATE brands SET name = ?, image_url = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE brands SET name = ?, logo_url = ? WHERE id = ?");
                 $stmt->execute([$name, $new_filename, $id]);
             } else {
                 throw new Exception("อัปโหลดรูปภาพไม่สำเร็จ");
@@ -208,8 +208,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <tr>
                         <td style="color:#888;">#<?php echo h($b['id']); ?></td>
                         <td style="text-align: center;">
-                            <?php if(!empty($b['image_url'])): ?>
-                                <img src="<?php echo h($b['image_url']); ?>" class="brand-img" alt="logo">
+                            <?php if(!empty($b['logo_url'])): ?>
+                                <img src="<?php echo h($b['logo_url']); ?>" class="brand-img" alt="logo">
                             <?php else: ?>
                                 <div class="brand-img" style="display:flex; align-items:center; justify-content:center; color:#ccc; font-size:0.8rem;">No Img</div>
                             <?php endif; ?>

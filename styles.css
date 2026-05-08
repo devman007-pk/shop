@@ -328,3 +328,31 @@ body .page-main .sidebar { width: 420px !important; max-width: 420px !important;
   /* Mobile Heart Button */
   .product-card .fav-btn { top: 10px !important; right: 10px !important; width: 38px !important; height: 38px !important; border-radius: 9px !important; }
 }
+
+/* =========================================
+   ล็อกความสูงกล่องสินค้าให้เท่ากันทุกกล่อง 100%
+   ========================================= */
+
+/* 1. บังคับให้กล่องสินค้าเป็นแบบ Flex เพื่อกระจายพื้นที่ด้านใน */
+.product-card {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+}
+
+/* 2. ล็อกชื่อสินค้าให้อยู่ใน 2 บรรทัด (ถ้าเกินให้ขึ้น ... แทน) */
+.product-card .prod-title {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important; /* บังคับแสดงสูงสุดแค่ 2 บรรทัด */
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.4 !important;
+    min-height: 2.8em !important; /* จองพื้นที่ไว้ 2 บรรทัดเสมอ (เผื่อสินค้าชื่อสั้นแค่ 1 บรรทัด) */
+    margin-bottom: 10px !important;
+}
+
+/* 3. ดันราคาสินค้า และปุ่มตะกร้าลงไปติดขอบล่างของกล่องเสมอ */
+.product-card .product-price {
+    margin-top: auto !important; /* คำสั่งพระเอกที่คอยดันส่วนนี้ลงไปล่างสุด */
+}
